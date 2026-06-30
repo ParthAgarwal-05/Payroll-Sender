@@ -165,7 +165,7 @@ class SendTextTab(QWidget):
                 
                 if search_query:
                     matches = (
-                        search_query in r.workman_id.lower() or
+                        search_query in (r.workman_id or "").lower() or
                         search_query in r.employee_name.lower() or
                         search_query in emp_phone.lower()
                     )
@@ -182,7 +182,7 @@ class SendTextTab(QWidget):
                 checkbox_item.setData(Qt.UserRole, r.id)  # Save record_id
                 self.table.setItem(idx, 0, checkbox_item)
                 
-                self.table.setItem(idx, 1, QTableWidgetItem(r.workman_id))
+                self.table.setItem(idx, 1, QTableWidgetItem(r.workman_id or ""))
                 self.table.setItem(idx, 2, QTableWidgetItem(r.employee_name))
                 self.table.setItem(idx, 3, QTableWidgetItem(phone))
                 self.table.setItem(idx, 4, QTableWidgetItem(f"{float(r.gross_wages):.2f}"))

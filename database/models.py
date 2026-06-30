@@ -1,5 +1,6 @@
 """SQLAlchemy models for Employees, Payroll Records, and Settings."""
 
+import uuid
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, func, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database.db import Base
@@ -10,7 +11,8 @@ class Employee(Base):
     __tablename__ = "employees"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    workman_id = Column(String, unique=True, index=True, nullable=False)
+    employee_uuid = Column(String, unique=True, index=True, nullable=False, default=lambda: uuid.uuid4().hex)
+    workman_id = Column(String, index=True, nullable=True)
     name = Column(String, nullable=False)
     phone = Column(String, nullable=False)
     designation = Column(String, nullable=True)
@@ -29,11 +31,12 @@ class PayrollRecord(Base):
     """Monthly payroll details, PDF metadata, and WhatsApp statuses for one employee."""
     __tablename__ = "payroll_records"
     __table_args__ = (
-        UniqueConstraint("workman_id", "month", "year", name="uq_workman_month_year"),
+        UniqueConstraint("employee_id", "month", "year", name="uq_employee_month_year"),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    workman_id = Column(String, ForeignKey("employees.workman_id"), nullable=False)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    workman_id = Column(String, nullable=True)
     
     # Period details
     month = Column(String, nullable=False)

@@ -79,20 +79,18 @@ class PayrollService:
         Updates employee profiles, inserts/updates payroll records, and
         returns a list of payroll record IDs that require PDF generation.
         """
+        from sqlalchemy import func
+        from utils.excel_parser import clean_workman_id
+
         session = get_session()
         record_ids_to_generate = []
         processed_in_batch = set()
         try:
             for row in valid_rows:
-                workman_id = row["workman_id"]
+                workman_id_raw = row.get("workman_id")
+                workman_id_clean = clean_workman_id(workman_id_raw)
                 month = row["month"]
                 year = row["year"]
-
-                batch_key = (workman_id, month, year)
-                if batch_key in processed_in_batch:
-                    logger.warning("Duplicate record in batch ignored: Employee %s, Period %s/%s", workman_id, month, year)
-                    continue
-                processed_in_batch.add(batch_key)
 
                 name = row["employee_name"]
                 phone = row["phone"]
@@ -102,10 +100,29 @@ class PayrollService:
                 guardian_name = row["guardian_name"]
                 
                 # 1. Sync Employee Profile
-                employee = session.query(Employee).filter_by(workman_id=workman_id).first()
+                employee = None
+                if workman_id_clean:
+                    employee = session.query(Employee).filter(
+                        func.upper(Employee.workman_id) == workman_id_clean.upper()
+                    ).first()
+
+                if not employee:
+                    employee = session.query(Employee).filter(
+                        func.upper(Employee.name) == name.strip().upper(),
+                        Employee.phone == phone.strip()
+                    ).first()
+
+                    if employee and workman_id_clean:
+                        if employee.workman_id and clean_workman_id(employee.workman_id):
+                            # Employee already has a different workman_id, do NOT merge
+                            employee = None
+                        else:
+                            # Update employee's workman_id
+                            employee.workman_id = workman_id_clean
+
                 if not employee:
                     employee = Employee(
-                        workman_id=workman_id,
+                        workman_id=workman_id_clean,
                         name=name,
                         phone=phone,
                         designation=designation,
@@ -123,17 +140,20 @@ class PayrollService:
                     if employee.uan != uan: employee.uan = uan
                     if employee.bank_account != bank_account: employee.bank_account = bank_account
                     if employee.guardian_name != guardian_name: employee.guardian_name = guardian_name
-                    # Restore deleted status
                     employee.is_deleted = False
                 
-                # Commit employee update to get ID/workman_id resolved
                 session.flush()
 
+                # Deduplicate batch uploads using employee.id
+                batch_key = (employee.id, month, year)
+                if batch_key in processed_in_batch:
+                    logger.warning("Duplicate record in batch ignored: Employee %s, Period %s/%s", employee.id, month, year)
+                    continue
+                processed_in_batch.add(batch_key)
+
                 # 2. Sync Payroll Record
-                month = row["month"]
-                year = row["year"]
                 record = session.query(PayrollRecord).filter_by(
-                    workman_id=workman_id, month=month, year=year
+                    employee_id=employee.id, month=month, year=year
                 ).first()
                 
                 # Prepare numeric comparisons & assignments
@@ -164,7 +184,8 @@ class PayrollService:
                 if not record:
                     # Create new payroll record
                     record = PayrollRecord(
-                        workman_id=workman_id,
+                        employee_id=employee.id,
+                        workman_id=workman_id_clean,
                         month=month,
                         year=year,
                         month_year=row["month_year"],
@@ -178,13 +199,15 @@ class PayrollService:
                 else:
                     # Check if any values changed to trigger PDF regeneration
                     changed = False
+                    if record.workman_id != workman_id_clean:
+                        record.workman_id = workman_id_clean
+                        changed = True
                     for k, v in payroll_data.items():
                         old_v = getattr(record, k)
                         if old_v != v:
                             setattr(record, k, v)
                             changed = True
                     
-                    # If monthly record values changed, we force PDF regeneration
                     if changed or not record.pdf_generated or not record.pdf_path:
                         record.pdf_generated = False
                         needs_pdf_gen = True

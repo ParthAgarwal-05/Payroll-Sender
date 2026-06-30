@@ -131,7 +131,7 @@ class UploadTab(QWidget):
             self.preview_table.setItem(idx, 0, QTableWidgetItem(str(row_num)))
             
             # Workman ID
-            self.preview_table.setItem(idx, 1, QTableWidgetItem(row["workman_id"]))
+            self.preview_table.setItem(idx, 1, QTableWidgetItem(row["workman_id"] or ""))
             
             # Name
             self.preview_table.setItem(idx, 2, QTableWidgetItem(row["employee_name"]))

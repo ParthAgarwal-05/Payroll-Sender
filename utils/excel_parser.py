@@ -101,6 +101,29 @@ def parse_date_str(val: Any) -> str | None:
     return s
 
 
+def clean_workman_id(val: Any) -> str | None:
+    """Normalize and clean Employee ID (workman_id).
+
+    Treats N/A, NA, None, empty, or whitespace as None.
+    Cleans float strings like 1001.0 -> 1001.
+    """
+    if val is None:
+        return None
+    s = str(val).strip()
+    if not s or s.upper() in ("N/A", "NA", "NONE", ""):
+        return None
+    if s.endswith(".0"):
+        try:
+            f_val = float(s)
+            if f_val.is_integer():
+                s = str(int(f_val))
+        except ValueError:
+            pass
+    if not s or s.upper() in ("N/A", "NA", "NONE", ""):
+        return None
+    return s
+
+
 def parse_payroll_excel(file_bytes: bytes) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Parse and validate payroll records from an uploaded Excel file.
 
@@ -142,7 +165,8 @@ def parse_payroll_excel(file_bytes: bytes) -> tuple[list[dict[str, Any]], list[d
         else:
             header_mapping[col] = -1
 
-    missing = [col for col in expected_cols if header_mapping[col] == -1]
+    required_cols = [col for col in expected_cols if col != "workman_id"]
+    missing = [col for col in required_cols if header_mapping[col] == -1]
     if missing:
         return [], [{"row": 1, "error": f"Missing required columns: {', '.join(missing)}"}]
 
@@ -156,7 +180,7 @@ def parse_payroll_excel(file_bytes: bytes) -> tuple[list[dict[str, Any]], list[d
 
         string_fields = [
             "establishment", "principal_employer", "address", "employee_name",
-            "workman_id", "guardian_name", "designation", "uan", "bank_account",
+            "guardian_name", "designation", "uan", "bank_account",
             "wage_period"
         ]
         for field in string_fields:
@@ -166,6 +190,13 @@ def parse_payroll_excel(file_bytes: bytes) -> tuple[list[dict[str, Any]], list[d
                 row_data[field] = ""
             else:
                 row_data[field] = str(val).strip()
+
+        # Read workman_id (optional business field)
+        if header_mapping.get("workman_id", -1) != -1:
+            workman_val = row[header_mapping["workman_id"]].value
+            row_data["workman_id"] = clean_workman_id(workman_val)
+        else:
+            row_data["workman_id"] = None
 
         # Read phone and clean
         phone_val = row[header_mapping["phone"]].value
@@ -192,12 +223,16 @@ def parse_payroll_excel(file_bytes: bytes) -> tuple[list[dict[str, Any]], list[d
             row_data["year"] = year_val
             
             # Check for duplicate employee record within the same Excel sheet
-            if "workman_id" in row_data and row_data["workman_id"]:
-                dup_key = (row_data["workman_id"].strip().upper(), month_name, year_val)
-                if dup_key in seen_employees:
-                    errors.append("Duplicate employee entry for the same month/year in sheet")
-                else:
-                    seen_employees.add(dup_key)
+            workman_id_clean = row_data.get("workman_id")
+            if workman_id_clean:
+                dup_key = (workman_id_clean.upper(), month_name, year_val)
+            else:
+                dup_key = (None, row_data.get("employee_name", "").strip().upper(), row_data.get("phone", "").strip(), month_name, year_val)
+                
+            if dup_key in seen_employees:
+                errors.append("Duplicate employee entry for the same month/year in sheet")
+            else:
+                seen_employees.add(dup_key)
 
         # Read attendance
         att_val = row[header_mapping["attendance"]].value

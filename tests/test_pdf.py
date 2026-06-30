@@ -92,6 +92,7 @@ class TestPdfUuidStorage(unittest.TestCase):
         session.commit()
 
         record = PayrollRecord(
+            employee_id=emp.id,
             workman_id="EMP_TEST_UUID",
             employee_name="Test UUID Employee",
             month="June",

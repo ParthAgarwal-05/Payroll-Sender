@@ -169,19 +169,69 @@ class TestWhatsAppService(unittest.TestCase):
         service = WhatsAppService()
         service.template_name = "wageslip"
         
-        # Missing standard field (like designation/guardian_name) raises ValueError since silent empty fallbacks are disabled (Requirement 9)
+        # Missing REQUIRED field (like employee_name) raises ValueError
+        class DummyRecord:
+            month_year = "June 2026"
+            establishment = "ABC"
+            principal_employer = "XYZ"
+            address = "Noida"
+            # employee_name omitted entirely
+            workman_id = "EMP"
+            guardian_name = "Ram"
+            designation = "Staff"
+            uan = "UAN"
+            bank_account = "BANK"
+            wage_period = "June 2026"
+            attendance = 26.0
+            basic = 10000.0
+            da = 0.0
+            allowances = 0.0
+            gross_wages = 10000.0
+            pf = 0.0
+            esi = 0.0
+            other_deductions = 0.0
+            net_wages = 10000.0
+            issue_date = "29/06/2026"
+
+        record = DummyRecord()
+        with self.assertRaises(ValueError):
+            service.build_template_payload("919876543210", record)
+
+    def test_build_template_payload_missing_optional_field_resolves_to_placeholder(self):
+        service = WhatsAppService()
+        service.template_name = "wageslip"
+        
+        # Missing optional fields (like workman_id and guardian_name) resolve to placeholder
         class DummyRecord:
             month_year = "June 2026"
             establishment = "ABC"
             principal_employer = "XYZ"
             address = "Noida"
             employee_name = "Amit"
-            workman_id = "EMP"
-            # guardian_name omitted entirely
+            workman_id = None # omitted / blank
+            guardian_name = "" # empty
+            designation = "Staff"
+            uan = "UAN"
+            bank_account = "BANK"
+            wage_period = "June 2026"
+            attendance = 26.0
+            basic = 10000.0
+            da = 0.0
+            allowances = 0.0
+            gross_wages = 10000.0
+            pf = 0.0
+            esi = 0.0
+            other_deductions = 0.0
+            net_wages = 10000.0
+            issue_date = "29/06/2026"
 
         record = DummyRecord()
-        with self.assertRaises(ValueError):
-            service.build_template_payload("919876543210", record)
+        payload = service.build_template_payload("919876543210", record)
+        params = payload["template"]["components"][0]["parameters"]
+        # workman_id is parameter index 5 (0-indexed position 5)
+        # guardian_name is parameter index 6 (0-indexed position 6)
+        self.assertEqual(params[5]["text"], "-")
+        self.assertEqual(params[6]["text"], "-")
 
 
 if __name__ == "__main__":

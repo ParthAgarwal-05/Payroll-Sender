@@ -382,33 +382,47 @@ class WhatsAppService:
         except Exception as e:
             raise ValueError(f"Failed to resolve placeholder '{field_name}': {str(e)}")
 
+        is_empty = False
         if val is None:
-            raise ValueError(f"Resolved value for placeholder '{field_name}' is None.")
-        
-        # Format numeric or text values cleanly
-        if field_name in ("basic", "da", "allowances", "gross_wages", "pf", "esi", "other_deductions", "net_wages"):
-            try:
-                f_val = float(val)
-                if f_val.is_integer():
-                    val_str = f"{int(f_val)}"
-                else:
-                    val_str = f"{f_val:.2f}"
-            except (ValueError, TypeError):
-                val_str = str(val)
-        elif field_name == "attendance":
-            try:
-                f_val = float(val)
-                if f_val.is_integer():
-                    val_str = f"{int(f_val)}"
-                else:
-                    val_str = f"{f_val:.1f}"
-            except (ValueError, TypeError):
-                val_str = str(val)
+            is_empty = True
         else:
-            val_str = str(val)
+            # Format numeric or text values cleanly
+            if field_name in ("basic", "da", "allowances", "gross_wages", "pf", "esi", "other_deductions", "net_wages"):
+                try:
+                    f_val = float(val)
+                    if f_val.is_integer():
+                        val_str = f"{int(f_val)}"
+                    else:
+                        val_str = f"{f_val:.2f}"
+                except (ValueError, TypeError):
+                    val_str = str(val)
+            elif field_name == "attendance":
+                try:
+                    f_val = float(val)
+                    if f_val.is_integer():
+                        val_str = f"{int(f_val)}"
+                    else:
+                        val_str = f"{f_val:.1f}"
+                except (ValueError, TypeError):
+                    val_str = str(val)
+            else:
+                val_str = str(val)
 
-        if not val_str or not val_str.strip():
-            raise ValueError(f"Resolved value for placeholder '{field_name}' is empty.")
+            if not val_str or not val_str.strip():
+                is_empty = True
+
+        if is_empty:
+            optional_fields = {
+                "workman_id", "uan", "guardian_name", "designation", "bank_account",
+                "establishment", "principal_employer", "address", "wage_period", "issue_date"
+            }
+            if field_name in optional_fields:
+                placeholder = SettingsManager.get("OPTIONAL_FIELD_PLACEHOLDER", "-")
+                if not placeholder or not placeholder.strip():
+                    placeholder = "-"
+                val_str = placeholder
+            else:
+                raise ValueError(f"Resolved value for placeholder '{field_name}' is empty.")
 
         return val_str
 

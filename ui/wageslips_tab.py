@@ -149,7 +149,7 @@ class WageSlipsTab(QWidget):
                 # Check search matches
                 if search_query:
                     matches = (
-                        search_query in r.workman_id.lower() or
+                        search_query in (r.workman_id or "").lower() or
                         search_query in r.employee_name.lower() or
                         search_query in emp_phone.lower() or
                         search_query in r.month_year.lower() or
@@ -165,7 +165,7 @@ class WageSlipsTab(QWidget):
                 emp = r.employee
                 
                 # Setup items
-                self.table.setItem(idx, 0, QTableWidgetItem(r.workman_id))
+                self.table.setItem(idx, 0, QTableWidgetItem(r.workman_id or ""))
                 self.table.setItem(idx, 1, QTableWidgetItem(r.employee_name))
                 self.table.setItem(idx, 2, QTableWidgetItem(emp.phone if emp else "—"))
                 self.table.setItem(idx, 3, QTableWidgetItem(r.month_year))

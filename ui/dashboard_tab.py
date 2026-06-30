@@ -152,7 +152,7 @@ class DashboardTab(QWidget):
             time_str = act["time"].strftime("%d/%m/%Y %H:%M:%S") if isinstance(act["time"], datetime) else str(act["time"])
             self.activity_table.setItem(idx, 0, QTableWidgetItem(time_str))
             self.activity_table.setItem(idx, 1, QTableWidgetItem(act["name"]))
-            self.activity_table.setItem(idx, 2, QTableWidgetItem(act["workman_id"]))
+            self.activity_table.setItem(idx, 2, QTableWidgetItem(act["workman_id"] or ""))
             self.activity_table.setItem(idx, 3, QTableWidgetItem(act["operation"]))
             
             # Status Cell

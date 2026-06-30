@@ -248,6 +248,7 @@ class TestWhatsAppDocumentTemplate(unittest.TestCase):
         os.close(temp_file_fd)
         
         record = PayrollRecord(
+            employee_id=emp.id,
             workman_id="EMP_SMART_01",
             employee_name="Smart Employee",
             month="June",
@@ -317,6 +318,7 @@ class TestWhatsAppDocumentTemplate(unittest.TestCase):
         os.close(temp_file_fd)
         
         record = PayrollRecord(
+            employee_id=emp.id,
             workman_id="EMP_EXPIRED_01",
             employee_name="Expired Employee",
             month="June",
@@ -450,6 +452,7 @@ class TestWhatsAppDocumentTemplate(unittest.TestCase):
         session.commit()
         
         record = PayrollRecord(
+            employee_id=emp.id,
             workman_id="EMP_TEXT_01",
             employee_name="Text Employee",
             month="June",

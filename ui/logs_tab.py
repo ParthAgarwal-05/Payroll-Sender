@@ -155,7 +155,7 @@ class LogsTab(QWidget):
                 if search_query:
                     matches = (
                         search_query in log["name"].lower() or
-                        search_query in log["workman_id"].lower() or
+                        search_query in (log["workman_id"] or "").lower() or
                         search_query in log["month_year"].lower()
                     )
                     if not matches:
@@ -167,7 +167,8 @@ class LogsTab(QWidget):
             for idx, log in enumerate(self.log_items):
                 time_str = log["time"].strftime("%d/%m/%Y %H:%M:%S") if isinstance(log["time"], datetime) else str(log["time"])
                 self.table.setItem(idx, 0, QTableWidgetItem(time_str))
-                self.table.setItem(idx, 1, QTableWidgetItem(f"{log['name']} ({log['workman_id']})"))
+                workman_id_display = f" ({log['workman_id']})" if log["workman_id"] else ""
+                self.table.setItem(idx, 1, QTableWidgetItem(f"{log['name']}{workman_id_display}"))
                 
                 # Mask phone and errors
                 masked_phone = mask_pii(log["phone"])
@@ -215,7 +216,7 @@ class LogsTab(QWidget):
                     writer.writerow([
                         time_str,
                         log["name"],
-                        log["workman_id"],
+                        log["workman_id"] or "",
                         mask_pii(log["phone"]),
                         log["type"],
                         log["status"],

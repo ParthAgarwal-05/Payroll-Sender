@@ -156,6 +156,7 @@ class TestPayrollIntegration(unittest.TestCase):
         
         # Insert first record
         rec1 = PayrollRecord(
+            employee_id=emp.id,
             workman_id="EMP_UNIQUE_01",
             month="June",
             year=2026,
@@ -167,8 +168,9 @@ class TestPayrollIntegration(unittest.TestCase):
         session.add(rec1)
         session.commit()
         
-        # Attempt to insert duplicate record with same (workman_id, month, year)
+        # Attempt to insert duplicate record with same (employee_id, month, year)
         rec2 = PayrollRecord(
+            employee_id=emp.id,
             workman_id="EMP_UNIQUE_01",
             month="June",
             year=2026,
