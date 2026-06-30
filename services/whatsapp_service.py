@@ -85,7 +85,6 @@ class WhatsAppService:
         self.template_name = SettingsManager.get("TEMPLATE_NAME", "wageslip")
         self.pdf_template_name = SettingsManager.get("PDF_TEMPLATE_NAME", "wageslip_pdf")
         self.template_language = SettingsManager.get("TEMPLATE_LANGUAGE", "en")
-        self.pdf_caption = SettingsManager.get("PDF_CAPTION", "")
         
         # Setup API URLs
         self.api_url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"

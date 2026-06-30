@@ -75,9 +75,6 @@ class SettingsTab(QWidget):
         self.temp_lang_input = QLineEdit()
         template_form.addRow("Template Language:", self.temp_lang_input)
 
-        self.pdf_caption_input = QLineEdit()
-        template_form.addRow("PDF Delivery Caption:", self.pdf_caption_input)
-
         self.pdf_dir_input = QLineEdit()
         template_form.addRow("PDF Output Folder:", self.pdf_dir_input)
         form_layout.addWidget(template_group)
@@ -152,7 +149,6 @@ class SettingsTab(QWidget):
         self.temp_name_input.setText(settings.get("TEMPLATE_NAME", ""))
         self.pdf_temp_name_input.setText(settings.get("PDF_TEMPLATE_NAME", ""))
         self.temp_lang_input.setText(settings.get("TEMPLATE_LANGUAGE", ""))
-        self.pdf_caption_input.setText(settings.get("PDF_CAPTION", ""))
         self.pdf_dir_input.setText(settings.get("PDF_OUTPUT_DIR", "GeneratedPdfs"))
 
         # Floats and Ints
@@ -182,7 +178,6 @@ class SettingsTab(QWidget):
             "TEMPLATE_NAME": self.temp_name_input.text().strip(),
             "PDF_TEMPLATE_NAME": self.pdf_temp_name_input.text().strip(),
             "TEMPLATE_LANGUAGE": self.temp_lang_input.text().strip(),
-            "PDF_CAPTION": self.pdf_caption_input.text().strip(),
             "PDF_OUTPUT_DIR": self.pdf_dir_input.text().strip(),
             
             "RATE_LIMIT_MPS": str(self.mps_input.value()),

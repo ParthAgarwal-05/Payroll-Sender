@@ -18,7 +18,6 @@ DEFAULT_SETTINGS = {
     "TEMPLATE_LANGUAGE": "en",
     
     # PDF Settings
-    "PDF_CAPTION": "Please find attached your wage slip for this month.",
     "PDF_OUTPUT_DIR": "GeneratedPdfs",
     
     # Rate Limiting & Retry

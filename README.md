@@ -13,7 +13,7 @@ Built using **Python 3.12+**, **PySide6 (Qt)**, **SQLAlchemy 2.x**, **SQLite**, 
 3. **🔄 Automatic Employee & Payroll Sync**: Auto-creates or updates permanent Employee profiles on Workman ID. Merges and overwrites existing payroll monthly runs when updated files are imported.
 4. **📄 Automatic Form VIII-C PDF Regeneration**: Generates or regenerates government compliance wage slips locally (`GeneratedPdfs/<Year>/<Month>/<WorkmanID>.pdf`) when wages variables change. Includes an **embedded PDF viewer** dialog.
 5. **💬 WhatsApp Text template distribution**: Delivers template wage slips respecting the Token Bucket rate limiter, adaptive backoffs, and Graph API requirements.
-6. **📎 WhatsApp PDF document delivery**: Uploads generated PDF files to Meta's Media API, retrieves the media ID, and sends direct document messages with optional captions.
+6. **📎 WhatsApp PDF document delivery**: Uploads generated PDF files to Meta's Media API, retrieves the media ID, and sends document messages using Meta's approved WhatsApp Document Template.
 7. **⚙️ Persistence Settings**: Categorized settings interface storing Meta Graph tokens, template names, rate limits (MPS), custom folder paths, and retry delays inside SQLite.
 8. **📜 Audit log trails**: Searchable transmission grids masking sensitive employee data (phone numbers, bank accounts, UAN, salaries) and exporting rows directly to CSV files.
 

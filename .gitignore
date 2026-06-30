@@ -14,6 +14,9 @@ ENV/
 
 # Database Files (Local SQLite Instance)
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 *.sqlite
 *.sqlite3
 
@@ -24,6 +27,7 @@ payroll_delivery_logs.csv
 
 # Generated Output Documents
 GeneratedPdfs/
+Wageslips/
 
 # Spreadsheets (Allow only the mock sample template)
 *.xlsx
