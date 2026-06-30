@@ -47,5 +47,93 @@ class TestPdfService(unittest.TestCase):
         self.assertTrue(pdf_bytes.startswith(b"%PDF"))  # PDF signature check
 
 
+class TestPdfUuidStorage(unittest.TestCase):
+    """Verifies that PDFs are stored using unique record UUIDs, which are immutable once generated."""
+
+    @classmethod
+    def setUpClass(cls):
+        import os
+        import tempfile
+        # Configure a temporary database directory
+        cls.temp_dir = tempfile.mkdtemp()
+        os.environ["PAYROLL_DATA_DIR"] = cls.temp_dir
+        
+        from database.db import init_database
+        init_database()
+
+    @classmethod
+    def tearDownClass(cls):
+        import os
+        import shutil
+        if os.path.exists(cls.temp_dir):
+            shutil.rmtree(cls.temp_dir)
+        if "PAYROLL_DATA_DIR" in os.environ:
+            del os.environ["PAYROLL_DATA_DIR"]
+
+    def setUp(self):
+        from database.db import get_session
+        from database.models import Employee, PayrollRecord
+        session = get_session()
+        session.query(PayrollRecord).delete()
+        session.query(Employee).delete()
+        session.commit()
+        session.close()
+
+    def test_uuid_generation_on_first_save_and_regeneration_reuse(self):
+        import os
+        from database.db import get_session
+        from database.models import Employee, PayrollRecord
+        from services.pdf_service import PdfService
+
+        # 1. Create a dummy employee and payroll record with pdf_uuid=None
+        session = get_session()
+        emp = Employee(workman_id="EMP_TEST_UUID", name="Test UUID Employee", phone="+919876543210")
+        session.add(emp)
+        session.commit()
+
+        record = PayrollRecord(
+            workman_id="EMP_TEST_UUID",
+            employee_name="Test UUID Employee",
+            month="June",
+            year=2026,
+            month_year="June 2026",
+            pdf_generated=False,
+            pdf_uuid=None
+        )
+        session.add(record)
+        session.commit()
+        record_id = record.id
+        session.close()
+
+        # 2. Generate and save PDF (triggers UUID generation)
+        pdf_path = PdfService.generate_and_save(record_id)
+
+        # 3. Verify UUID is generated and saved in DB
+        session = get_session()
+        record = session.query(PayrollRecord).filter_by(id=record_id).first()
+        self.assertIsNotNone(record.pdf_uuid)
+        self.assertTrue(len(record.pdf_uuid) == 32)  # uuid4 hex length is 32
+
+        # 4. Verify filename on disk uses the UUID
+        expected_filename = f"{record.pdf_uuid}.pdf"
+        self.assertTrue(pdf_path.endswith(expected_filename))
+        self.assertTrue(os.path.exists(pdf_path))
+        
+        # Keep track of first generated UUID and path
+        first_uuid = record.pdf_uuid
+        first_path = pdf_path
+        session.close()
+
+        # 5. Regenerate PDF and verify UUID remains identical and path is overwritten
+        pdf_path_2 = PdfService.generate_and_save(record_id)
+        
+        session = get_session()
+        record = session.query(PayrollRecord).filter_by(id=record_id).first()
+        self.assertEqual(record.pdf_uuid, first_uuid)
+        self.assertEqual(pdf_path_2, first_path)
+        self.assertTrue(os.path.exists(pdf_path_2))
+        session.close()
+
+
 if __name__ == "__main__":
     unittest.main()

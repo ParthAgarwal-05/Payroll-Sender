@@ -298,7 +298,7 @@ class PdfService:
     def generate_and_save(payroll_record_id: int) -> str:
         """Load a payroll record, render PDF, save it organized by Month/Year, and update DB.
 
-        Path format: GeneratedPdfs/<Year>/<Month>/<WorkmanID>.pdf
+        Path format: GeneratedPdfs/<Year>/<Month>/<pdf_uuid>.pdf
         """
         session = get_session()
         try:
@@ -312,9 +312,6 @@ class PdfService:
                 "address": record.address or "Address",
             }
 
-            # Generate binary PDF bytes
-            pdf_bytes = generate_wage_slip(record, company_info)
-
             # Retrieve folder path from settings
             base_dir_setting = SettingsManager.get("PDF_OUTPUT_DIR", "GeneratedPdfs")
             base_dir = Path(base_dir_setting)
@@ -325,8 +322,22 @@ class PdfService:
             
             target_dir = base_dir / year_folder / month_folder
             target_dir.mkdir(parents=True, exist_ok=True)
+
+            # Ensure pdf_uuid is generated defensively checking for collisions on disk
+            if not record.pdf_uuid:
+                import uuid
+                while True:
+                    candidate_uuid = uuid.uuid4().hex
+                    candidate_filename = f"{candidate_uuid}.pdf"
+                    candidate_path = target_dir / candidate_filename
+                    if not candidate_path.exists():
+                        record.pdf_uuid = candidate_uuid
+                        break
+
+            # Generate binary PDF bytes
+            pdf_bytes = generate_wage_slip(record, company_info)
             
-            filename = f"{record.workman_id}.pdf"
+            filename = f"{record.pdf_uuid}.pdf"
             file_path = target_dir / filename
             
             # Write to disk

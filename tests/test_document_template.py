@@ -274,7 +274,7 @@ class TestWhatsAppDocumentTemplate(unittest.TestCase):
         success, msg = self.service.send_pdf_with_retry_and_db_logging(record_id)
         
         self.assertTrue(success)
-        mock_upload.assert_called_once()
+        mock_upload.assert_called_once_with(temp_file_path, custom_filename="Smart_Employee.pdf")
         
         # Verify media_id & message_id are saved (Requirement 4)
         session = get_session()
@@ -349,7 +349,7 @@ class TestWhatsAppDocumentTemplate(unittest.TestCase):
         
         self.assertTrue(success)
         # Should have called upload once to resolve expired media ID
-        mock_upload.assert_called_once()
+        mock_upload.assert_called_once_with(temp_file_path, custom_filename="Expired_Employee.pdf")
         
         # Verify db is updated with the new successfully sent details
         session = get_session()

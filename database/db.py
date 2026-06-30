@@ -57,6 +57,8 @@ def run_migrations(connection) -> None:
         columns = [row[1] for row in cursor.fetchall()]
         if columns and "pdf_media_id" not in columns:
             connection.exec_driver_sql("ALTER TABLE payroll_records ADD COLUMN pdf_media_id VARCHAR")
+        if columns and "pdf_uuid" not in columns:
+            connection.exec_driver_sql("ALTER TABLE payroll_records ADD COLUMN pdf_uuid VARCHAR")
 
 
 def get_session():

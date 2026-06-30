@@ -67,6 +67,7 @@ class PayrollRecord(Base):
     pdf_path = Column(String, nullable=True)
     pdf_generated = Column(Boolean, default=False, nullable=False)
     pdf_generated_at = Column(DateTime, nullable=True)
+    pdf_uuid = Column(String, nullable=True)
     
     # WhatsApp Text sending status
     text_status = Column(String, default="Pending", nullable=False)  # "Pending", "Success", "Failed"
