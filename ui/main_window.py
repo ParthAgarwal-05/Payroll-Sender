@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 
-from ui.style import DARK_STYLESHEET
+
 from ui.dashboard_tab import DashboardTab
 from ui.upload_tab import UploadTab
 from ui.wageslips_tab import WageSlipsTab
@@ -25,8 +25,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Payroll Manager - Desktop & WhatsApp Management System")
         self.resize(1280, 800)
         
-        # Apply Dark QSS Stylesheet
-        self.setStyleSheet(DARK_STYLESHEET)
+
         
         self.init_ui()
         self.setup_signals()
@@ -57,8 +56,9 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(brand_lbl)
         
         divider = QFrame()
+        divider.setObjectName("sidebarDivider")
         divider.setFrameShape(QFrame.HLine)
-        divider.setStyleSheet("color: #27272a; margin-bottom: 10px;")
+        divider.setStyleSheet("margin-bottom: 10px;")
         sidebar_layout.addWidget(divider)
 
         # Navigation buttons mapping (Tab Name, Button Icon text or Emoji)

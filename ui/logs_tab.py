@@ -188,10 +188,11 @@ class LogsTab(QWidget):
                 
                 # Status
                 status_item = QTableWidgetItem(log["status"])
+                from ui.style import ThemeManager
                 if log["status"] == "Success":
-                    status_item.setForeground(Qt.green)
+                    status_item.setForeground(ThemeManager.get_instance().get_success_color())
                 elif log["status"] == "Failed":
-                    status_item.setForeground(Qt.red)
+                    status_item.setForeground(ThemeManager.get_instance().get_danger_color())
                 self.table.setItem(idx, 4, status_item)
                 
                 self.table.setItem(idx, 5, QTableWidgetItem(str(log["attempts"])))
@@ -211,7 +212,8 @@ class LogsTab(QWidget):
             return
 
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Logs CSV", "payroll_delivery_logs.csv", "CSV Files (*.csv)"
+            self, "Save Logs CSV", "payroll_delivery_logs.csv", "CSV Files (*.csv)",
+            options=QFileDialog.DontUseNativeDialog
         )
         if not file_path:
             return

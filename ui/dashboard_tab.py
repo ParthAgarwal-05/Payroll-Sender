@@ -156,12 +156,14 @@ class DashboardTab(QWidget):
             self.activity_table.setItem(idx, 3, QTableWidgetItem(act["operation"]))
             
             # Status Cell
+            from ui.style import ThemeManager
+            theme_mgr = ThemeManager.get_instance()
             status_item = QTableWidgetItem(act["status"])
             if act["status"] == "Success":
-                status_item.setForeground(Qt.green)
+                status_item.setForeground(theme_mgr.get_success_color())
             elif act["status"] == "Failed":
-                status_item.setForeground(Qt.red)
-            self.activity_table.setItem(idx, 4, QTableWidgetItem(status_item))
+                status_item.setForeground(theme_mgr.get_danger_color())
+            self.activity_table.setItem(idx, 4, status_item)
             
             details = act["error"] if act["error"] else (f"Attempts: {act['attempts']}" if act["attempts"] > 1 else "OK")
             self.activity_table.setItem(idx, 5, QTableWidgetItem(details))

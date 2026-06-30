@@ -118,8 +118,8 @@ class PdfPreviewDialog(QDialog):
 
         # Metadata Row (Selectable)
         self.meta_lbl = QLabel()
+        self.meta_lbl.setObjectName("pdfMetaLabel")
         self.meta_lbl.setWordWrap(True)
-        self.meta_lbl.setStyleSheet("color: #a1a1aa; font-family: monospace; font-size: 11px; padding: 4px; background-color: #1a1a1e; border-radius: 4px;")
         
         meta_text = f"File Path: {self.pdf_path}"
         if PDF_VIEWER_AVAILABLE and os.path.exists(self.pdf_path):

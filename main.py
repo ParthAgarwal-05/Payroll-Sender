@@ -26,6 +26,10 @@ def main():
         SettingsManager.load_to_env()
         logger.info("Application configuration reloaded from settings table.")
         
+        # Apply visual theme globally to all screens and dialogs
+        from ui.style import ThemeManager
+        ThemeManager.get_instance().apply_theme()
+        
         window = MainWindow()
         window.show()
         

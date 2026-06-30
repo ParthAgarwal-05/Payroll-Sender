@@ -205,6 +205,15 @@ class SettingsTab(QWidget):
 
         try:
             SettingsManager.save_settings(settings_dict)
+            new_theme = settings_dict["THEME"]
+            from ui.style import ThemeManager
+            ThemeManager.get_instance().set_theme(new_theme)
+            
+            # Immediately refresh all tables to display correct foreground text contrast colors
+            main_win = self.window()
+            if main_win and hasattr(main_win, "refresh_all_tabs"):
+                main_win.refresh_all_tabs()
+                
             if not silent:
                 QMessageBox.information(self, "Settings Saved", "Application configuration saved successfully.")
             return True
@@ -283,7 +292,8 @@ class SettingsTab(QWidget):
         from PySide6.QtWidgets import QFileDialog
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Select Backup File to Restore",
-            str(backup_dir), "SQLite Database (*.db)"
+            str(backup_dir), "SQLite Database (*.db)",
+            options=QFileDialog.DontUseNativeDialog
         )
         if not file_path:
             return

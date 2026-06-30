@@ -203,11 +203,13 @@ class SendTextTab(QWidget):
                 self.table.setItem(idx, 5, QTableWidgetItem(f"{float(r.net_wages):.2f}"))
                 
                 # Status Cell
+                from ui.style import ThemeManager
+                theme_mgr = ThemeManager.get_instance()
                 status_item = QTableWidgetItem(r.text_status)
                 if r.text_status == "Success":
-                    status_item.setForeground(Qt.green)
+                    status_item.setForeground(theme_mgr.get_success_color())
                 elif r.text_status == "Failed":
-                    status_item.setForeground(Qt.red)
+                    status_item.setForeground(theme_mgr.get_danger_color())
                     status_item.setToolTip(r.text_error if r.text_error else "")
                 self.table.setItem(idx, 6, status_item)
                 
@@ -277,9 +279,11 @@ class SendTextTab(QWidget):
                 item = self.table.item(row, 0)
                 if item and item.data(Qt.UserRole) == rec_id:
                     # Update status cell
+                    from ui.style import ThemeManager
+                    theme_mgr = ThemeManager.get_instance()
                     status_text = "Success" if success else "Failed"
                     status_item = QTableWidgetItem(status_text)
-                    status_item.setForeground(Qt.green if success else Qt.red)
+                    status_item.setForeground(theme_mgr.get_success_color() if success else theme_mgr.get_danger_color())
                     if not success:
                         status_item.setToolTip(error_msg)
                     self.table.setItem(row, 6, status_item)

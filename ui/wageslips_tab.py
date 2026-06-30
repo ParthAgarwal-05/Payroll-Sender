@@ -186,26 +186,28 @@ class WageSlipsTab(QWidget):
                 # PDF Status Item
                 pdf_status = "Generated" if r.pdf_generated else "Pending"
                 pdf_item = QTableWidgetItem(pdf_status)
+                from ui.style import ThemeManager
+                theme_mgr = ThemeManager.get_instance()
                 if r.pdf_generated:
-                    pdf_item.setForeground(Qt.green)
+                    pdf_item.setForeground(theme_mgr.get_success_color())
                 else:
-                    pdf_item.setForeground(Qt.yellow)
+                    pdf_item.setForeground(theme_mgr.get_warning_color())
                 self.table.setItem(idx, 6, pdf_item)
 
                 # Text Status Item
                 text_item = QTableWidgetItem(r.text_status)
                 if r.text_status == "Success":
-                    text_item.setForeground(Qt.green)
+                    text_item.setForeground(theme_mgr.get_success_color())
                 elif r.text_status == "Failed":
-                    text_item.setForeground(Qt.red)
+                    text_item.setForeground(theme_mgr.get_danger_color())
                 self.table.setItem(idx, 7, text_item)
 
                 # PDF Message Status Item
                 pdf_msg_item = QTableWidgetItem(r.pdf_status)
                 if r.pdf_status == "Success":
-                    pdf_msg_item.setForeground(Qt.green)
+                    pdf_msg_item.setForeground(theme_mgr.get_success_color())
                 elif r.pdf_status == "Failed":
-                    pdf_msg_item.setForeground(Qt.red)
+                    pdf_msg_item.setForeground(theme_mgr.get_danger_color())
                 self.table.setItem(idx, 8, pdf_msg_item)
 
                 # Create Cell Widget for Row Actions

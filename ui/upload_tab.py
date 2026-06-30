@@ -35,7 +35,7 @@ class UploadTab(QWidget):
         # File Select Row
         file_layout = QHBoxLayout()
         self.file_lbl = QLabel("No Excel file selected.")
-        self.file_lbl.setStyleSheet("color: #a1a1aa; font-style: italic;")
+        self.file_lbl.setStyleSheet("font-style: italic;")
         file_layout.addWidget(self.file_lbl)
         
         self.select_btn = QPushButton("Select Excel")
@@ -70,7 +70,7 @@ class UploadTab(QWidget):
 
         # Summary Statistics Layout
         self.stats_lbl = QLabel("")
-        self.stats_lbl.setStyleSheet("font-weight: bold; color: #ffffff;")
+        self.stats_lbl.setStyleSheet("font-weight: bold;")
         layout.addWidget(self.stats_lbl)
 
         # Commits Buttons
@@ -92,7 +92,8 @@ class UploadTab(QWidget):
     def select_excel_file(self):
         """Open file dialog to select payroll Excel spreadsheet and start background parser."""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open Payroll Excel", "", "Excel Files (*.xlsx *.xls)"
+            self, "Open Payroll Excel", "", "Excel Files (*.xlsx *.xls)",
+            options=QFileDialog.DontUseNativeDialog
         )
         if not file_path:
             return
@@ -147,19 +148,21 @@ class UploadTab(QWidget):
             self.preview_table.setItem(idx, 6, QTableWidgetItem(f"{float(row['net_wages']):.2f}"))
             
             # Status Cell
+            from ui.style import ThemeManager
+            theme_mgr = ThemeManager.get_instance()
             if row["is_valid"]:
                 status_item = QTableWidgetItem("Valid")
-                status_item.setForeground(Qt.green)
+                status_item.setForeground(theme_mgr.get_success_color())
             else:
                 err_msg = ", ".join(row["errors"])
                 status_item = QTableWidgetItem(f"Invalid: {err_msg}")
-                status_item.setForeground(Qt.red)
+                status_item.setForeground(theme_mgr.get_danger_color())
                 
                 # Highlight invalid row cells
                 for col in range(8):
                     item = self.preview_table.item(idx, col)
                     if item:
-                        item.setBackground(Qt.darkRed)
+                        item.setBackground(theme_mgr.get_invalid_row_bg())
                         
             self.preview_table.setItem(idx, 7, status_item)
 
