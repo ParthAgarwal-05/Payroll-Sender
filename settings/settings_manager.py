@@ -14,6 +14,7 @@ DEFAULT_SETTINGS = {
     
     # Templates
     "TEMPLATE_NAME": "wageslip",
+    "PDF_TEMPLATE_NAME": "wageslip_pdf",
     "TEMPLATE_LANGUAGE": "en",
     
     # PDF Settings

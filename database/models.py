@@ -78,6 +78,7 @@ class PayrollRecord(Base):
     # WhatsApp PDF sending status
     pdf_status = Column(String, default="Pending", nullable=False)  # "Pending", "Success", "Failed"
     pdf_message_id = Column(String, nullable=True)
+    pdf_media_id = Column(String, nullable=True)
     pdf_attempts = Column(Integer, default=0, nullable=False)
     pdf_last_sent = Column(DateTime, nullable=True)
     pdf_error = Column(String, nullable=True)

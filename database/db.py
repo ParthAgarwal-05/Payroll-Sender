@@ -42,6 +42,21 @@ def init_database() -> None:
     
     # Create all tables defined in models
     Base.metadata.create_all(bind=_engine)
+    
+    # Run sqlite migrations
+    with _engine.begin() as connection:
+        run_migrations(connection)
+
+
+def run_migrations(connection) -> None:
+    """Check and dynamically add missing database columns to existing schemas."""
+    # Check if payroll_records table exists
+    cursor = connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE type='table' AND name='payroll_records'")
+    if cursor.fetchone():
+        cursor = connection.exec_driver_sql("PRAGMA table_info(payroll_records)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if columns and "pdf_media_id" not in columns:
+            connection.exec_driver_sql("ALTER TABLE payroll_records ADD COLUMN pdf_media_id VARCHAR")
 
 
 def get_session():

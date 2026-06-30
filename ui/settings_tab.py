@@ -69,6 +69,9 @@ class SettingsTab(QWidget):
         self.temp_name_input = QLineEdit()
         template_form.addRow("Text Template Name:", self.temp_name_input)
 
+        self.pdf_temp_name_input = QLineEdit()
+        template_form.addRow("PDF Template Name:", self.pdf_temp_name_input)
+
         self.temp_lang_input = QLineEdit()
         template_form.addRow("Template Language:", self.temp_lang_input)
 
@@ -147,6 +150,7 @@ class SettingsTab(QWidget):
         self.api_version_input.setText(settings.get("API_VERSION", "v25.0"))
         
         self.temp_name_input.setText(settings.get("TEMPLATE_NAME", ""))
+        self.pdf_temp_name_input.setText(settings.get("PDF_TEMPLATE_NAME", ""))
         self.temp_lang_input.setText(settings.get("TEMPLATE_LANGUAGE", ""))
         self.pdf_caption_input.setText(settings.get("PDF_CAPTION", ""))
         self.pdf_dir_input.setText(settings.get("PDF_OUTPUT_DIR", "GeneratedPdfs"))
@@ -176,6 +180,7 @@ class SettingsTab(QWidget):
             "API_VERSION": self.api_version_input.text().strip(),
             
             "TEMPLATE_NAME": self.temp_name_input.text().strip(),
+            "PDF_TEMPLATE_NAME": self.pdf_temp_name_input.text().strip(),
             "TEMPLATE_LANGUAGE": self.temp_lang_input.text().strip(),
             "PDF_CAPTION": self.pdf_caption_input.text().strip(),
             "PDF_OUTPUT_DIR": self.pdf_dir_input.text().strip(),
@@ -212,9 +217,9 @@ class SettingsTab(QWidget):
             success, msg = client.validate_credentials()
             
             if success:
-                QMessageBox.information(self, "Connection Verified", "Success! Connection to Meta API is verified and active.")
+                QMessageBox.information(self, "Connection Verified", f"Connection to Meta API verified successfully:\n\n{msg}")
             else:
-                QMessageBox.warning(self, "Connection Failed", f"Credentials rejected by Meta Graph API:\n{msg}")
+                QMessageBox.warning(self, "Connection Failed", f"Credentials or templates validation failed:\n\n{msg}")
         except Exception as e:
             QMessageBox.critical(self, "Test Failed", f"An exception occurred during testing:\n{str(e)}")
         finally:

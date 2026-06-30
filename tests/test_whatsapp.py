@@ -15,27 +15,54 @@ class TestWhatsAppService(unittest.TestCase):
 
     @patch("requests.get")
     def test_validate_credentials_success(self, mock_get):
-        # Configure mock response
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_get.return_value = mock_response
-        
         service = WhatsAppService()
-        # Stub credentials for test consistency
         service.access_token = "mock_token"
         service.phone_number_id = "mock_phone_id"
+        service.business_account_id = "mock_biz_id"
+
+        def side_effect(url, headers=None, params=None, timeout=None):
+            resp = MagicMock()
+            if "mock_phone_id" in url:
+                resp.status_code = 200
+                resp.json.return_value = {"id": "mock_phone_id"}
+            elif "message_templates" in url:
+                resp.status_code = 200
+                name_param = params.get("name") if params else None
+                if name_param == service.template_name:
+                    resp.json.return_value = {"data": [{"name": service.template_name}]}
+                elif name_param == service.pdf_template_name:
+                    resp.json.return_value = {"data": [{
+                        "name": service.pdf_template_name,
+                        "status": "APPROVED",
+                        "language": "en",
+                        "components": [
+                            {"type": "HEADER", "format": "DOCUMENT"},
+                            {"type": "BODY", "text": "Hello {{1}} {{2}}"}
+                        ]
+                    }]}
+            return resp
+
+        mock_get.side_effect = side_effect
         
         success, msg = service.validate_credentials()
         
         self.assertTrue(success)
-        self.assertIn("Connection successful", msg)
+        self.assertIn("✓ API Token: Valid", msg)
+        self.assertIn(f"✓ PDF Template: {service.pdf_template_name} exists", msg)
+        self.assertIn("✓ BODY Variables (2)", msg)
+        self.assertIn("1. 1", msg)
+        self.assertIn("2. 2", msg)
 
     @patch("requests.get")
     def test_validate_credentials_failure(self, mock_get):
-        mock_response = MagicMock()
-        mock_response.status_code = 401
-        mock_response.text = "Unauthorized"
-        mock_get.return_value = mock_response
+        def side_effect(url, headers=None, params=None, timeout=None):
+            resp = MagicMock()
+            resp.status_code = 401
+            resp.text = "HTTP 401: Unauthorized"
+            resp.json.return_value = {"error": {"message": "HTTP 401: Unauthorized", "code": 190}}
+            return resp
+
+        mock_get.side_effect = side_effect
         
         service = WhatsAppService()
         service.access_token = "invalid_token"
@@ -44,7 +71,7 @@ class TestWhatsAppService(unittest.TestCase):
         success, msg = service.validate_credentials()
         
         self.assertFalse(success)
-        self.assertIn("HTTP 401", msg)
+        self.assertIn("invalid", msg)
 
     @patch("requests.post")
     def test_upload_pdf_media_success(self, mock_post):
@@ -65,7 +92,7 @@ class TestWhatsAppService(unittest.TestCase):
                 self.assertEqual(media_id, "123456789")
 
     @patch("requests.post")
-    def test_send_raw_pdf_success(self, mock_post):
+    def test_send_raw_pdf_template_success(self, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -77,7 +104,14 @@ class TestWhatsAppService(unittest.TestCase):
         service.access_token = "mock_token"
         service.phone_number_id = "mock_phone_id"
 
-        result = service.send_raw_pdf("919876543210", "123456789", "EMP001", "January 2026")
+        result = service.send_raw_pdf_template(
+            phone="919876543210",
+            template_name="wageslip_pdf",
+            media_id="123456789",
+            filename="EMP001_January_2026.pdf",
+            employee_name="Amit Kumar",
+            month_year="January 2026"
+        )
 
         self.assertTrue(result["success"])
         self.assertEqual(result["message_id"], "wamid.ABC123XYZ")
@@ -135,9 +169,7 @@ class TestWhatsAppService(unittest.TestCase):
         service = WhatsAppService()
         service.template_name = "wageslip"
         
-        # Missing standard field (like designation) should still succeed because of fallback,
-        # but if we delete an attribute entirely, getattr(record, field, "") defaults to "" and succeeds.
-        # Let's verify that deleting an attribute entirely still returns a value (as fallback "").
+        # Missing standard field (like designation/guardian_name) raises ValueError since silent empty fallbacks are disabled (Requirement 9)
         class DummyRecord:
             month_year = "June 2026"
             establishment = "ABC"
@@ -148,11 +180,8 @@ class TestWhatsAppService(unittest.TestCase):
             # guardian_name omitted entirely
 
         record = DummyRecord()
-        payload = service.build_template_payload("919876543210", record)
-        
-        params = payload["template"]["components"][0]["parameters"]
-        self.assertEqual(len(params), 21)
-        self.assertEqual(params[6]["text"], "")  # guardian_name should fallback to empty string
+        with self.assertRaises(ValueError):
+            service.build_template_payload("919876543210", record)
 
 
 if __name__ == "__main__":

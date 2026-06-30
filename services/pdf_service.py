@@ -328,6 +328,7 @@ class PdfService:
             record.pdf_path = str(file_path.resolve())
             record.pdf_generated = True
             record.pdf_generated_at = datetime.now()
+            record.pdf_media_id = None
             session.commit()
 
             return record.pdf_path
