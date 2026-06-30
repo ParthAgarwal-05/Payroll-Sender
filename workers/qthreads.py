@@ -120,3 +120,17 @@ class WhatsAppSendWorker(QThread):
             self.finished.emit(success_count, failed_count)
         except Exception as e:
             self.error.emit(str(e))
+
+
+class ConnectionTestWorker(QThread):
+    """Worker to perform connection and credential testing asynchronously."""
+    finished = Signal(bool, str)
+    error = Signal(str)
+
+    def run(self):
+        try:
+            whatsapp_service = WhatsAppService()
+            success, msg = whatsapp_service.validate_credentials()
+            self.finished.emit(success, msg)
+        except Exception as e:
+            self.error.emit(str(e))

@@ -14,6 +14,9 @@ from services.payroll_service import PayrollService
 from services.pdf_service import PdfService
 from ui.pdf_preview import PdfPreviewDialog, open_file_in_default_viewer
 from workers.qthreads import PdfGenerationWorker
+from utils.logger_config import setup_logger
+
+logger = setup_logger("WageSlipsTab")
 
 
 class WageSlipsTab(QWidget):
@@ -290,12 +293,8 @@ class WageSlipsTab(QWidget):
 
             file_exists = r_exists(pdf_path)
 
-            # Debug logging (Task 4)
-            print("\nPreview PDF")
-            print(f"Record ID: {record_id}")
-            print(f"Employee: {emp_name}")
-            print(f"Path: {pdf_path}")
-            print(f"Exists: {file_exists}\n")
+            # Debug logging
+            logger.debug("Preview PDF - Record ID: %d, Employee: %s, Path: %s, Exists: %s", record_id, emp_name, pdf_path, file_exists)
 
             if not file_exists:
                 QMessageBox.critical(self, "File Not Found", f"The PDF file does not exist at:\n{pdf_path}")

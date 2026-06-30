@@ -259,6 +259,7 @@ class SendPdfTab(QWidget):
         self.retry_failed_btn.setEnabled(False)
 
         # Start QThread with type "pdf"
+        self.current_batch_ids = record_ids
         self.worker = WhatsAppSendWorker(record_ids, send_type="pdf")
         self.worker.progress.connect(self.on_send_progress)
         self.worker.finished.connect(self.on_send_finished)
@@ -270,7 +271,39 @@ class SendPdfTab(QWidget):
         self.progress_bar.setValue(current)
         outcome = "Sent" if success else f"Failed ({error_msg})"
         self.progress_lbl.setText(f"Delivering PDF {current}/{total} to {name}: {outcome}...")
-        self.load_records()
+        
+        # Partially update the affected row to avoid heavy full table rebuild
+        if hasattr(self, "current_batch_ids") and len(self.current_batch_ids) >= current:
+            rec_id = self.current_batch_ids[current - 1]
+            for row in range(self.table.rowCount()):
+                item = self.table.item(row, 0)
+                if item and item.data(Qt.UserRole) == rec_id:
+                    # Update status cell
+                    status_text = "Success" if success else "Failed"
+                    status_item = QTableWidgetItem(status_text)
+                    status_item.setForeground(Qt.green if success else Qt.red)
+                    if not success:
+                        status_item.setToolTip(error_msg)
+                    self.table.setItem(row, 6, status_item)
+
+                    # Update attempts cell
+                    att_item = self.table.item(row, 7)
+                    if att_item:
+                        try:
+                            attempts = int(att_item.text()) + 1
+                            att_item.setText(str(attempts))
+                        except ValueError:
+                            pass
+                    
+                    # Update last sent cell
+                    from datetime import datetime
+                    sent_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    sent_item = self.table.item(row, 8)
+                    if sent_item:
+                        sent_item.setText(sent_str)
+                    else:
+                        self.table.setItem(row, 8, QTableWidgetItem(sent_str))
+                    break
 
     def on_send_finished(self, success_count, failed_count):
         """Callback when batch sending worker finishes execution."""

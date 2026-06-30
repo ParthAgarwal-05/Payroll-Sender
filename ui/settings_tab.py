@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
 )
 from settings.settings_manager import SettingsManager
 from services.whatsapp_service import WhatsAppService
+from workers.qthreads import ConnectionTestWorker
 
 
 class SettingsTab(QWidget):
@@ -198,25 +199,30 @@ class SettingsTab(QWidget):
             return False
 
     def test_connection(self):
-        """Save settings first, then test Meta Graph credentials by validating Phone ID."""
+        """Save settings first, then test Meta Graph credentials by validating Phone ID asynchronously."""
         if not self.save_settings(silent=True):
             return
 
         self.test_btn.setEnabled(False)
         self.test_btn.setText("Testing...")
         
-        # Run test inside the main thread (validate_credentials has a 20s timeout, but usually completes in 1-2s)
-        try:
-            # Re-read settings loaded into env inside save_settings
-            client = WhatsAppService()
-            success, msg = client.validate_credentials()
-            
-            if success:
-                QMessageBox.information(self, "Connection Verified", f"Connection to Meta API verified successfully:\n\n{msg}")
-            else:
-                QMessageBox.warning(self, "Connection Failed", f"Credentials or templates validation failed:\n\n{msg}")
-        except Exception as e:
-            QMessageBox.critical(self, "Test Failed", f"An exception occurred during testing:\n{str(e)}")
-        finally:
-            self.test_btn.setEnabled(True)
-            self.test_btn.setText("Test Connection")
+        # Start connection test in a background thread to keep main UI thread responsive
+        self.test_worker = ConnectionTestWorker(self)
+        self.test_worker.finished.connect(self.on_test_finished)
+        self.test_worker.error.connect(self.on_test_error)
+        self.test_worker.start()
+
+    def on_test_finished(self, success, msg):
+        self.test_btn.setEnabled(True)
+        self.test_btn.setText("Test Connection")
+        if success:
+            QMessageBox.information(self, "Connection Verified", f"Connection to Meta API verified successfully:\n\n{msg}")
+        else:
+            QMessageBox.warning(self, "Connection Failed", f"Credentials or templates validation failed:\n\n{msg}")
+        self.test_worker = None
+
+    def on_test_error(self, err_msg):
+        self.test_btn.setEnabled(True)
+        self.test_btn.setText("Test Connection")
+        QMessageBox.critical(self, "Test Failed", f"An exception occurred during testing:\n{err_msg}")
+        self.test_worker = None

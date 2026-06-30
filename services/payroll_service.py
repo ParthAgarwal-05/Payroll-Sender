@@ -100,6 +100,9 @@ class PayrollService:
                 guardian_name = row["guardian_name"]
                 
                 # 1. Sync Employee Profile
+                from utils.phone_utils import normalize_phone
+                phone_normalized, phone_valid, _ = normalize_phone(phone)
+                
                 employee = None
                 if workman_id_clean:
                     employee = session.query(Employee).filter(
@@ -107,10 +110,19 @@ class PayrollService:
                     ).first()
 
                 if not employee:
-                    employee = session.query(Employee).filter(
-                        func.upper(Employee.name) == name.strip().upper(),
-                        Employee.phone == phone.strip()
-                    ).first()
+                    # Match by name and normalized phone
+                    candidates = session.query(Employee).filter(
+                        func.upper(Employee.name) == name.strip().upper()
+                    ).all()
+                    
+                    for cand in candidates:
+                        cand_norm, cand_valid, _ = normalize_phone(cand.phone)
+                        if phone_valid and cand_valid and cand_norm == phone_normalized:
+                            employee = cand
+                            break
+                        elif not phone_valid and not cand_valid and cand.phone.strip() == phone.strip():
+                            employee = cand
+                            break
 
                     if employee and workman_id_clean:
                         if employee.workman_id and clean_workman_id(employee.workman_id):

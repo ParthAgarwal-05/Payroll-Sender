@@ -99,11 +99,12 @@ def run_migrations(connection) -> None:
         connection.exec_driver_sql("DROP TABLE IF EXISTS payroll_records")
         connection.exec_driver_sql("DROP TABLE IF EXISTS employees")
         
-        # Recreate tables with new schema
-        Base.metadata.create_all(bind=connection.engine)
+        # Recreate tables with new schema bound to transactional connection
+        Base.metadata.create_all(bind=connection)
         
         # Insert employees back, preserving all values and generating missing UUIDs
         from datetime import datetime
+        valid_emp_keys = [c.name for c in Base.metadata.tables["employees"].columns]
         for emp in existing_employees:
             if not emp.get("created_at"):
                 emp["created_at"] = datetime.now()
@@ -112,12 +113,13 @@ def run_migrations(connection) -> None:
             if "is_deleted" not in emp or emp["is_deleted"] is None:
                 emp["is_deleted"] = 0
                 
-            cols = list(emp.keys())
+            emp_filtered = {k: v for k, v in emp.items() if k in valid_emp_keys}
+            cols = list(emp_filtered.keys())
             cols_str = ", ".join([f'"{c}"' for c in cols])
             bind_str = ", ".join([f":{c}" for c in cols])
             connection.execute(
                 text(f"INSERT INTO employees ({cols_str}) VALUES ({bind_str})"),
-                emp
+                emp_filtered
             )
             
         # Build maps to resolve employee_id for payroll_records

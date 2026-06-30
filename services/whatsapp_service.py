@@ -340,25 +340,24 @@ class WhatsAppService:
             })
             
         # Logging layout exactly as requested by Requirement 8
-        print("\n==========================================")
-        print(f"Template Name: {template_def.get('name', '')}")
-        print(f"Template Language: {template_def.get('language', '')}")
-        print(f"Template Status: {template_def.get('status', '')}\n")
-        print(f"Raw BODY Text:\n{body_text}\n")
-        print("Variables Found:")
-        print("[\n" + ",\n".join(variables) + "\n]\n")
-        print("Resolved Values:")
+        self.logger.debug("==========================================")
+        self.logger.debug("Template Name: %s", template_def.get('name', ''))
+        self.logger.debug("Template Language: %s", template_def.get('language', ''))
+        self.logger.debug("Template Status: %s", template_def.get('status', ''))
+        self.logger.debug("Raw BODY Text:\n%s", body_text)
+        self.logger.debug("Variables Found:\n[%s]", ",\n".join(variables))
+        self.logger.debug("Resolved Values:")
         for r_line in resolved_log:
-            print(r_line)
-        print("\nFinal WhatsApp Parameters:")
+            self.logger.debug(r_line)
+        self.logger.debug("Final WhatsApp Parameters:")
         formatted_params = []
         for p in parameters:
             formatted_params.append({
                 "type": p["type"],
                 "text": p["text"]
             })
-        print(json.dumps(formatted_params, indent=2))
-        print("\n==========================================\n")
+        self.logger.debug(json.dumps(formatted_params, indent=2))
+        self.logger.debug("==========================================")
         
         return parameters
 
@@ -438,25 +437,24 @@ class WhatsAppService:
         }
         
         filename = custom_filename if custom_filename else os.path.basename(pdf_path)
-        files = {
-            "file": (filename, open(pdf_path, "rb"), "application/pdf")
-        }
+        
         data = {
             "messaging_product": "whatsapp",
             "type": "document"
         }
         
         try:
-            response = requests.post(
-                self.media_url,
-                headers=headers,
-                files=files,
-                data=data,
-                timeout=60
-            )
-            
-            # Close file handle
-            files["file"][1].close()
+            with open(pdf_path, "rb") as f_in:
+                files = {
+                    "file": (filename, f_in, "application/pdf")
+                }
+                response = requests.post(
+                    self.media_url,
+                    headers=headers,
+                    files=files,
+                    data=data,
+                    timeout=60
+                )
             
             self.logger.info("Media upload response status: %d", response.status_code)
             
@@ -530,12 +528,12 @@ class WhatsAppService:
             self.logger.error("Local payload validation failed: %s", val_err)
             return {"success": False, "message_id": "", "error": str(val_err)}
 
-        # Print serialized JSON immediately before the POST request (Step 6)
+        # Logging metadata and payload immediately before the POST request
         serialized_json = json.dumps(payload, indent=2)
-        print("\n--- SENDING METADATA & PAYLOAD ---")
-        print(f"API URL: {self.api_url}")
-        print(f"Serialized JSON Payload sent over HTTP:\n{serialized_json}")
-        print("-----------------------------------\n")
+        self.logger.debug("--- SENDING METADATA & PAYLOAD ---")
+        self.logger.debug("API URL: %s", self.api_url)
+        self.logger.debug("Serialized JSON Payload sent over HTTP:\n%s", serialized_json)
+        self.logger.debug("-----------------------------------")
 
         self.logger.info("Sending template text message to %s", phone)
         
@@ -547,14 +545,14 @@ class WhatsAppService:
                 timeout=30
             )
             
-            # Print full HTTP response body (Step 4)
-            print("\n--- META GRAPH API RESPONSE ---")
-            print(f"HTTP Response Code: {response.status_code}")
+            # Logging full HTTP response body
+            self.logger.debug("--- META GRAPH API RESPONSE ---")
+            self.logger.debug("HTTP Response Code: %d", response.status_code)
             try:
-                print(f"Response Body:\n{json.dumps(response.json(), indent=2)}")
+                self.logger.debug("Response Body:\n%s", json.dumps(response.json(), indent=2))
             except Exception:
-                print(f"Response Body:\n{response.text}")
-            print("--------------------------------\n")
+                self.logger.debug("Response Body:\n%s", response.text)
+            self.logger.debug("--------------------------------")
             
             if response.status_code in (200, 201):
                 response_data = response.json()
@@ -675,10 +673,10 @@ class WhatsAppService:
 
         # Logging payload (Requirement 8)
         serialized_json = json.dumps(payload, indent=2)
-        print("\n--- SENDING METADATA & PAYLOAD ---")
-        print(f"API URL: {self.api_url}")
-        print(f"Serialized JSON Payload sent over HTTP:\n{serialized_json}")
-        print("-----------------------------------\n")
+        self.logger.debug("--- SENDING METADATA & PAYLOAD ---")
+        self.logger.debug("API URL: %s", self.api_url)
+        self.logger.debug("Serialized JSON Payload sent over HTTP:\n%s", serialized_json)
+        self.logger.debug("-----------------------------------")
 
         self.logger.info("Sending PDF template message to %s using media_id=%s", phone, media_id)
         
@@ -690,15 +688,15 @@ class WhatsAppService:
                 timeout=30
             )
             
-            print("\n--- META GRAPH API RESPONSE ---")
-            print(f"HTTP Response Code: {response.status_code}")
+            self.logger.debug("--- META GRAPH API RESPONSE ---")
+            self.logger.debug("HTTP Response Code: %d", response.status_code)
             try:
                 resp_json = response.json()
-                print(f"Response Body:\n{json.dumps(resp_json, indent=2)}")
+                self.logger.debug("Response Body:\n%s", json.dumps(resp_json, indent=2))
             except Exception:
                 resp_json = {}
-                print(f"Response Body:\n{response.text}")
-            print("--------------------------------\n")
+                self.logger.debug("Response Body:\n%s", response.text)
+            self.logger.debug("--------------------------------")
             
             if response.status_code in (200, 201):
                 msg_id = resp_json.get("messages", [{}])[0].get("id", "")
@@ -734,261 +732,319 @@ class WhatsAppService:
     def send_text_with_retry_and_db_logging(self, record_id: int) -> tuple[bool, str]:
         """Perform text message sending with rate limiter, exponential back-off retries, and database logging."""
         session = get_session()
-        record = session.query(PayrollRecord).filter_by(id=record_id).first()
-        if not record:
-            session.close()
-            return False, "Payroll record not found."
-
-        # Fetch template definition from Meta at runtime (Requirement 2)
         try:
-            template_def = self.fetch_template_definition(self.template_name)
+            record = session.query(PayrollRecord).filter_by(id=record_id).first()
+            if not record:
+                return False, "Payroll record not found."
+
+            # Fetch template definition from Meta at runtime (Requirement 2)
+            try:
+                template_def = self.fetch_template_definition(self.template_name)
+            except Exception as e:
+                try:
+                    record.text_status = "Failed"
+                    record.text_error = f"Failed to fetch template definition: {str(e)}"
+                    record.text_attempts += 1
+                    record.text_last_sent = datetime.now()
+                    session.commit()
+                except Exception as db_err:
+                    session.rollback()
+                    self.logger.error("Database update failed during template fetch error logging: %s", db_err)
+                return False, f"Failed to fetch template: {str(e)}"
+
+            phone_normalized, phone_valid, phone_error = normalize_phone(record.uan if record.uan else "")
+            # Fall back to main phone number in record
+            if not phone_valid or not phone_normalized:
+                phone_normalized, phone_valid, phone_error = normalize_phone(record.bank_account if record.bank_account else "") # wait - actual phone number column
+            
+            employee = record.employee
+            target_phone = employee.phone if employee else ""
+            if not target_phone:
+                try:
+                    record.text_status = "Failed"
+                    record.text_error = "No phone number configured on employee profile."
+                    record.text_attempts += 1
+                    record.text_last_sent = datetime.now()
+                    session.commit()
+                except Exception as db_err:
+                    session.rollback()
+                    self.logger.error("Database update failed during target phone check: %s", db_err)
+                return False, "No phone number."
+
+            phone_normalized, phone_valid, phone_error = normalize_phone(target_phone)
+            if not phone_valid:
+                try:
+                    record.text_status = "Failed"
+                    record.text_error = f"Invalid phone format: {phone_error}"
+                    record.text_attempts += 1
+                    record.text_last_sent = datetime.now()
+                    session.commit()
+                except Exception as db_err:
+                    session.rollback()
+                    self.logger.error("Database update failed during phone validation: %s", db_err)
+                return False, f"Invalid phone: {phone_error}"
+
+            max_retries = int(SettingsManager.get("RETRY_COUNT", "3"))
+            retry_delay = float(SettingsManager.get("RETRY_DELAY", "2.0"))
+            
+            result = {"success": False, "message_id": "", "error": "Attempt limit reached"}
+            
+            for attempt in range(1, max_retries + 1):
+                # Apply rate limiter
+                self._rate_limiter.acquire()
+                
+                try:
+                    record.text_attempts += 1
+                    record.text_last_sent = datetime.now()
+                    session.commit()
+                except Exception as db_err:
+                    session.rollback()
+                    self.logger.error("Database update failed during attempt setup: %s", db_err)
+                    raise db_err
+                
+                # Send
+                result = self.send_raw_text(phone_normalized, record, template_def=template_def)
+                
+                try:
+                    if result["success"]:
+                        record.text_status = "Success"
+                        record.text_message_id = result["message_id"]
+                        record.text_error = ""
+                        session.commit()
+                        return True, "Success"
+                        
+                    error = result["error"]
+                    record.text_error = error
+                    record.text_status = "Failed"
+                    session.commit()
+                except Exception as db_err:
+                    session.rollback()
+                    self.logger.error("Database update failed during send status logging: %s", db_err)
+                    raise db_err
+                
+                # Check for non-retriable codes
+                is_non_retriable = any(f"HTTP {code}" in error for code in self.NON_RETRIABLE_CODES)
+                if is_non_retriable:
+                    self.logger.error("Non-retriable WhatsApp send error: %s", error)
+                    break
+                    
+                # If HTTP 429, inform rate limiter
+                if "HTTP 429" in error:
+                    self._rate_limiter.report_rate_limit()
+                    
+                if attempt < max_retries:
+                    # Exponential backoff
+                    delay = RateLimiter.get_backoff_delay(attempt - 1, base_delay=retry_delay)
+                    self.logger.info("Retrying text send in %.2f seconds (attempt %d)...", delay, attempt + 1)
+                    time.sleep(delay)
+
+            return False, result["error"]
         except Exception as e:
-            record.text_status = "Failed"
-            record.text_error = f"Failed to fetch template definition: {str(e)}"
-            record.text_attempts += 1
-            record.text_last_sent = datetime.now()
-            session.commit()
+            session.rollback()
+            self.logger.exception("Failed to complete WhatsApp send process for record %d: %s", record_id, e)
+            return False, str(e)
+        finally:
             session.close()
-            return False, f"Failed to fetch template: {str(e)}"
-
-        phone_normalized, phone_valid, phone_error = normalize_phone(record.uan if record.uan else "")
-        # Fall back to main phone number in record
-        if not phone_valid or not phone_normalized:
-            phone_normalized, phone_valid, phone_error = normalize_phone(record.bank_account if record.bank_account else "") # wait - actual phone number column
-        
-        employee = record.employee
-        target_phone = employee.phone if employee else ""
-        if not target_phone:
-            record.text_status = "Failed"
-            record.text_error = "No phone number configured on employee profile."
-            record.text_attempts += 1
-            record.text_last_sent = datetime.now()
-            session.commit()
-            session.close()
-            return False, "No phone number."
-
-        phone_normalized, phone_valid, phone_error = normalize_phone(target_phone)
-        if not phone_valid:
-            record.text_status = "Failed"
-            record.text_error = f"Invalid phone format: {phone_error}"
-            record.text_attempts += 1
-            record.text_last_sent = datetime.now()
-            session.commit()
-            session.close()
-            return False, f"Invalid phone: {phone_error}"
-
-        max_retries = int(SettingsManager.get("RETRY_COUNT", "3"))
-        retry_delay = float(SettingsManager.get("RETRY_DELAY", "2.0"))
-        
-        result = {"success": False, "message_id": "", "error": "Attempt limit reached"}
-        
-        for attempt in range(1, max_retries + 1):
-            # Apply rate limiter
-            self._rate_limiter.acquire()
-            
-            record.text_attempts += 1
-            record.text_last_sent = datetime.now()
-            session.commit()
-            
-            # Send
-            result = self.send_raw_text(phone_normalized, record, template_def=template_def)
-            
-            if result["success"]:
-                record.text_status = "Success"
-                record.text_message_id = result["message_id"]
-                record.text_error = ""
-                session.commit()
-                session.close()
-                return True, "Success"
-                
-            error = result["error"]
-            record.text_error = error
-            record.text_status = "Failed"
-            session.commit()
-            
-            # Check for non-retriable codes
-            is_non_retriable = any(f"HTTP {code}" in error for code in self.NON_RETRIABLE_CODES)
-            if is_non_retriable:
-                self.logger.error("Non-retriable WhatsApp send error: %s", error)
-                break
-                
-            # If HTTP 429, inform rate limiter
-            if "HTTP 429" in error:
-                self._rate_limiter.report_rate_limit()
-                
-            if attempt < max_retries:
-                # Exponential backoff
-                delay = RateLimiter.get_backoff_delay(attempt - 1, base_delay=retry_delay)
-                self.logger.info("Retrying text send in %.2f seconds (attempt %d)...", delay, attempt + 1)
-                time.sleep(delay)
-
-        session.close()
-        return False, result["error"]
     def send_pdf_with_retry_and_db_logging(self, record_id: int) -> tuple[bool, str]:
         """Perform PDF media upload (if needed), document template sending, rate limiting, retries, and database updates."""
         session = get_session()
-        record = session.query(PayrollRecord).filter_by(id=record_id).first()
-        if not record:
-            session.close()
-            return False, "Payroll record not found."
-
-        # Fetch template definition from Meta at runtime (Requirement 2)
         try:
-            template_def = self.fetch_template_definition(self.pdf_template_name)
-        except Exception as e:
-            record.pdf_status = "Failed"
-            record.pdf_error = f"Failed to fetch template definition: {str(e)}"
-            record.pdf_attempts += 1
-            record.pdf_last_sent = datetime.now()
-            session.commit()
-            session.close()
-            return False, f"Failed to fetch template: {str(e)}"
+            record = session.query(PayrollRecord).filter_by(id=record_id).first()
+            if not record:
+                return False, "Payroll record not found."
 
-        # Verify PDF file exists
-        pdf_path = record.pdf_path
-        if not pdf_path or not os.path.exists(pdf_path):
-            record.pdf_status = "Failed"
-            record.pdf_error = "PDF file has not been generated or does not exist."
-            record.pdf_attempts += 1
-            record.pdf_last_sent = datetime.now()
-            session.commit()
-            session.close()
-            return False, "PDF file missing."
-
-        employee = record.employee
-        target_phone = employee.phone if employee else ""
-        if not target_phone:
-            record.pdf_status = "Failed"
-            record.pdf_error = "No phone number configured on employee profile."
-            record.pdf_attempts += 1
-            record.pdf_last_sent = datetime.now()
-            session.commit()
-            session.close()
-            return False, "No phone number."
-
-        phone_normalized, phone_valid, phone_error = normalize_phone(target_phone)
-        if not phone_valid:
-            record.pdf_status = "Failed"
-            record.pdf_error = f"Invalid phone format: {phone_error}"
-            record.pdf_attempts += 1
-            record.pdf_last_sent = datetime.now()
-            session.commit()
-            session.close()
-            return False, f"Invalid phone: {phone_error}"
-
-        max_retries = int(SettingsManager.get("RETRY_COUNT", "3"))
-        retry_delay = float(SettingsManager.get("RETRY_DELAY", "2.0"))
-        
-        result = {"success": False, "message_id": "", "error": "Attempt limit reached"}
-        
-        # Determine dynamic filename (friendly filename from employee name only)
-        import re
-        clean_emp_name = re.sub(r"[^a-zA-Z0-9_-]", "_", record.employee_name.strip())
-        dynamic_filename = f"{clean_emp_name}.pdf"
-
-        # Check existing media_id from DB record (Requirement 5)
-        media_id = record.pdf_media_id or ""
-
-        # Flow: upload media then send
-        for attempt in range(1, max_retries + 1):
-            self._rate_limiter.acquire()
-            
-            record.pdf_attempts += 1
-            record.pdf_last_sent = datetime.now()
-            session.commit()
-            
-            is_media_error = False
+            # Fetch template definition from Meta at runtime (Requirement 2)
             try:
-                # 1. Upload PDF if we do not have a stored media_id
-                if not media_id:
-                    # Logging before upload (Requirement 8)
-                    self.logger.info(
-                        "Uploading PDF... Employee: %s, Month: %s, Filename: %s, Path: %s",
-                        record.employee_name, record.month_year, dynamic_filename, pdf_path
-                    )
-                    start_time = time.time()
-                    media_id = self.upload_pdf_media(pdf_path, custom_filename=dynamic_filename)
-                    upload_duration = time.time() - start_time
-                    # Logging after upload (Requirement 8)
-                    self.logger.info("Media ID: %s (upload duration: %.2f seconds)", media_id, upload_duration)
-                    
-                    # Store media_id inside the payroll record (Requirement 4)
-                    record.pdf_media_id = media_id
-                    session.commit()
-
-                # 2. Send Document Template
-                # Logging before sending (Requirement 8)
-                self.logger.info(
-                    "Sending PDF template. Template Name: %s, Employee: %s, Month: %s, Media ID: %s",
-                    self.pdf_template_name, record.employee_name, record.month_year, media_id
-                )
-                
-                result = self.send_raw_pdf_template(
-                    phone=phone_normalized,
-                    template_name=self.pdf_template_name,
-                    media_id=media_id,
-                    filename=dynamic_filename,
-                    employee_name=record.employee_name,
-                    month_year=f"{record.month} {record.year}",
-                    template_def=template_def
-                )
-                
-                if result["success"]:
-                    record.pdf_status = "Success"
-                    record.pdf_message_id = result["message_id"]
-                    record.pdf_error = ""
-                    session.commit()
-                    
-                    # Logging success (Requirement 8)
-                    masked_phone = phone_normalized[:5] + "******" + phone_normalized[-2:] if len(phone_normalized) > 7 else phone_normalized
-                    self.logger.info(
-                        "WhatsApp document template sent successfully. Message ID: %s, Media ID: %s, Template: %s, Employee: %s, Phone: %s",
-                        result["message_id"], media_id, self.pdf_template_name, record.employee_name, masked_phone
-                    )
-                    
-                    session.close()
-                    return True, "Success"
-                    
-                # Handle failure
-                error = result["error"]
-                record.pdf_error = error
-                record.pdf_status = "Failed"
-                session.commit()
-                
-                # Check for expired/invalid media ID (Requirement 5)
-                if "meta_code" in result and str(result["meta_code"]) in ("100", "131009", "131053"):
-                    is_media_error = True
-                elif any(word in error.lower() for word in ("media", "expired", "invalid")):
-                    is_media_error = True
-                    
-                if is_media_error:
-                    self.logger.warning("Stored media ID %s expired or invalid. Clearing it to force re-upload on next attempt.", media_id)
-                    media_id = ""
-                    record.pdf_media_id = None
-                    session.commit()
-
+                template_def = self.fetch_template_definition(self.pdf_template_name)
             except Exception as e:
-                error = str(e)
-                record.pdf_error = error
-                record.pdf_status = "Failed"
-                session.commit()
+                try:
+                    record.pdf_status = "Failed"
+                    record.pdf_error = f"Failed to fetch template definition: {str(e)}"
+                    record.pdf_attempts += 1
+                    record.pdf_last_sent = datetime.now()
+                    session.commit()
+                except Exception as db_err:
+                    session.rollback()
+                    self.logger.error("Database update failed during PDF template fetch error logging: %s", db_err)
+                return False, f"Failed to fetch template: {str(e)}"
+
+            # Verify PDF file exists
+            pdf_path = record.pdf_path
+            if not pdf_path or not os.path.exists(pdf_path):
+                try:
+                    record.pdf_status = "Failed"
+                    record.pdf_error = "PDF file has not been generated or does not exist."
+                    record.pdf_attempts += 1
+                    record.pdf_last_sent = datetime.now()
+                    session.commit()
+                except Exception as db_err:
+                    session.rollback()
+                    self.logger.error("Database update failed during PDF missing error logging: %s", db_err)
+                return False, "PDF file missing."
+
+            employee = record.employee
+            target_phone = employee.phone if employee else ""
+            if not target_phone:
+                try:
+                    record.pdf_status = "Failed"
+                    record.pdf_error = "No phone number configured on employee profile."
+                    record.pdf_attempts += 1
+                    record.pdf_last_sent = datetime.now()
+                    session.commit()
+                except Exception as db_err:
+                    session.rollback()
+                    self.logger.error("Database update failed during PDF target phone check: %s", db_err)
+                return False, "No phone number."
+
+            phone_normalized, phone_valid, phone_error = normalize_phone(target_phone)
+            if not phone_valid:
+                try:
+                    record.pdf_status = "Failed"
+                    record.pdf_error = f"Invalid phone format: {phone_error}"
+                    record.pdf_attempts += 1
+                    record.pdf_last_sent = datetime.now()
+                    session.commit()
+                except Exception as db_err:
+                    session.rollback()
+                    self.logger.error("Database update failed during PDF phone validation check: %s", db_err)
+                return False, f"Invalid phone: {phone_error}"
+
+            max_retries = int(SettingsManager.get("RETRY_COUNT", "3"))
+            retry_delay = float(SettingsManager.get("RETRY_DELAY", "2.0"))
+            
+            result = {"success": False, "message_id": "", "error": "Attempt limit reached"}
+            
+            # Determine dynamic filename (friendly filename from employee name only)
+            import re
+            clean_emp_name = re.sub(r"[^a-zA-Z0-9_-]", "_", record.employee_name.strip())
+            dynamic_filename = f"{clean_emp_name}.pdf"
+
+            # Check existing media_id from DB record (Requirement 5)
+            media_id = record.pdf_media_id or ""
+
+            # Flow: upload media then send
+            for attempt in range(1, max_retries + 1):
+                self._rate_limiter.acquire()
                 
-            # If HTTP 429, inform rate limiter
-            if "HTTP 429" in error:
-                self._rate_limiter.report_rate_limit()
-
-            is_non_retriable = False
-            if not is_media_error:
-                is_non_retriable = any(f"HTTP {code}" in error for code in self.NON_RETRIABLE_CODES)
+                try:
+                    record.pdf_attempts += 1
+                    record.pdf_last_sent = datetime.now()
+                    session.commit()
+                except Exception as db_err:
+                    session.rollback()
+                    self.logger.error("Database update failed during PDF attempt setup: %s", db_err)
+                    raise db_err
                 
-            if is_non_retriable:
-                self.logger.error("Non-retriable WhatsApp document send error: %s", error)
-                break
+                is_media_error = False
+                try:
+                    # 1. Upload PDF if we do not have a stored media_id
+                    if not media_id:
+                        # Logging before upload (Requirement 8)
+                        self.logger.info(
+                            "Uploading PDF... Employee: %s, Month: %s, Filename: %s, Path: %s",
+                            record.employee_name, record.month_year, dynamic_filename, pdf_path
+                        )
+                        start_time = time.time()
+                        media_id = self.upload_pdf_media(pdf_path, custom_filename=dynamic_filename)
+                        upload_duration = time.time() - start_time
+                        # Logging after upload (Requirement 8)
+                        self.logger.info("Media ID: %s (upload duration: %.2f seconds)", media_id, upload_duration)
+                        
+                        # Store media_id inside the payroll record (Requirement 4)
+                        record.pdf_media_id = media_id
+                        session.commit()
 
-            if attempt < max_retries:
-                delay = RateLimiter.get_backoff_delay(attempt - 1, base_delay=retry_delay)
-                self.logger.info("Retrying PDF send in %.2f seconds (attempt %d)...", delay, attempt + 1)
-                time.sleep(delay)
+                    # 2. Send Document Template
+                    # Logging before sending (Requirement 8)
+                    self.logger.info(
+                        "Sending PDF template. Template Name: %s, Employee: %s, Month: %s, Media ID: %s",
+                        self.pdf_template_name, record.employee_name, record.month_year, media_id
+                    )
+                    
+                    result = self.send_raw_pdf_template(
+                        phone=phone_normalized,
+                        template_name=self.pdf_template_name,
+                        media_id=media_id,
+                        filename=dynamic_filename,
+                        employee_name=record.employee_name,
+                        month_year=f"{record.month} {record.year}",
+                        template_def=template_def
+                    )
+                    
+                    try:
+                        if result["success"]:
+                            record.pdf_status = "Success"
+                            record.pdf_message_id = result["message_id"]
+                            record.pdf_error = ""
+                            session.commit()
+                            
+                            # Logging success (Requirement 8)
+                            masked_phone = phone_normalized[:5] + "******" + phone_normalized[-2:] if len(phone_normalized) > 7 else phone_normalized
+                            self.logger.info(
+                                "WhatsApp document template sent successfully. Message ID: %s, Media ID: %s, Template: %s, Employee: %s, Phone: %s",
+                                result["message_id"], media_id, self.pdf_template_name, record.employee_name, masked_phone
+                            )
+                            return True, "Success"
+                            
+                        # Handle failure
+                        error = result["error"]
+                        record.pdf_error = error
+                        record.pdf_status = "Failed"
+                        session.commit()
+                    except Exception as db_err:
+                        session.rollback()
+                        self.logger.error("Database update failed during PDF status logging: %s", db_err)
+                        raise db_err
+                    
+                    # Check for expired/invalid media ID (Requirement 5)
+                    if "meta_code" in result and str(result["meta_code"]) in ("100", "131009", "131053"):
+                        is_media_error = True
+                    elif any(word in error.lower() for word in ("media", "expired", "invalid")):
+                        is_media_error = True
+                        
+                    if is_media_error:
+                        self.logger.warning("Stored media ID %s expired or invalid. Clearing it to force re-upload on next attempt.", media_id)
+                        media_id = ""
+                        try:
+                            record.pdf_media_id = None
+                            session.commit()
+                        except Exception as db_err:
+                            session.rollback()
+                            self.logger.error("Database update failed during clearing expired media ID: %s", db_err)
+                            raise db_err
 
-        session.close()
-        return False, result.get("error", "Failed")
+                except Exception as e:
+                    error = str(e)
+                    try:
+                        record.pdf_error = error
+                        record.pdf_status = "Failed"
+                        session.commit()
+                    except Exception as db_err:
+                        session.rollback()
+                        self.logger.error("Database update failed during PDF retry exception logging: %s", db_err)
+                        raise db_err
+                    
+                # If HTTP 429, inform rate limiter
+                if "HTTP 429" in error:
+                    self._rate_limiter.report_rate_limit()
+
+                is_non_retriable = False
+                if not is_media_error:
+                    is_non_retriable = any(f"HTTP {code}" in error for code in self.NON_RETRIABLE_CODES)
+                    
+                if is_non_retriable:
+                    self.logger.error("Non-retriable WhatsApp document send error: %s", error)
+                    break
+
+                if attempt < max_retries:
+                    delay = RateLimiter.get_backoff_delay(attempt - 1, base_delay=retry_delay)
+                    self.logger.info("Retrying PDF send in %.2f seconds (attempt %d)...", delay, attempt + 1)
+                    time.sleep(delay)
+
+            return False, result.get("error", "Failed")
+        except Exception as e:
+            session.rollback()
+            self.logger.exception("Failed to complete WhatsApp PDF send process for record %d: %s", record_id, e)
+            return False, str(e)
+        finally:
+            session.close()
