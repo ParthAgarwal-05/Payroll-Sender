@@ -63,6 +63,8 @@ def clean_phone(val: Any) -> str | None:
         return None
     
     s = str(val).strip()
+    if s.endswith(".0"):
+        s = s[:-2]
     if not s:
         return None
 

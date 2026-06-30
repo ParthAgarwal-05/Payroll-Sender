@@ -1,4 +1,4 @@
-# PayrollPro Desktop & WhatsApp Management System
+# Payroll Manager - Desktop & WhatsApp Management System
 
 A production-quality standalone Python desktop application that merges employee payroll parsing, synchronization, ReportLab Form VIII-C PDF slip generation, and rate-limited WhatsApp messaging (both Text template and Media API PDF slip delivery) into a single unified desktop interface.
 

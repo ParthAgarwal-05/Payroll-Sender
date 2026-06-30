@@ -99,9 +99,11 @@ class WhatsAppSendWorker(QThread):
                 
                 # Fetch employee name for reporting progress
                 session = get_session()
-                record = session.query(PayrollRecord).filter_by(id=record_id).first()
-                emp_name = record.employee_name if record else f"Record ID {record_id}"
-                session.close()
+                try:
+                    record = session.query(PayrollRecord).filter_by(id=record_id).first()
+                    emp_name = record.employee_name if record else f"Record ID {record_id}"
+                finally:
+                    session.close()
 
                 if self.send_type == "text":
                     success, err = whatsapp_service.send_text_with_retry_and_db_logging(record_id)

@@ -4,7 +4,7 @@ from pathlib import Path
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox,
     QTableWidget, QTableWidgetItem, QPushButton, QHeaderView, QMessageBox,
-    QProgressBar, QStyle, QSizePolicy
+    QProgressBar, QStyle, QSizePolicy, QApplication
 )
 from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtGui import QIcon

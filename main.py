@@ -11,7 +11,7 @@ from utils.logger_config import setup_logger
 def main():
     # 1. Setup centralized logs
     logger = setup_logger("Main")
-    logger.info("Starting PayrollPro Desktop Application...")
+    logger.info("Starting Payroll Manager Desktop Application...")
 
     try:
         # 2. Setup SQLite Database and SQLAlchemy tables

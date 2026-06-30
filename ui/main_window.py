@@ -22,7 +22,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PayrollPro Desktop & WhatsApp Management System")
+        self.setWindowTitle("Payroll Manager - Desktop & WhatsApp Management System")
         self.resize(1280, 800)
         
         # Apply Dark QSS Stylesheet
@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.setSpacing(5)
 
         # Brand / App Title
-        brand_lbl = QLabel("PAYROLLPRO")
+        brand_lbl = QLabel("PAYROLL MANAGER")
         brand_lbl.setObjectName("sidebarTitle")
         brand_lbl.setAlignment(Qt.AlignCenter)
         sidebar_layout.addWidget(brand_lbl)
