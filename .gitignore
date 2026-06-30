@@ -1,0 +1,48 @@
+# Python Compiler & Cache Files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Database Files (Local SQLite Instance)
+*.db
+*.sqlite
+*.sqlite3
+
+# Runtime Log Files & Folders
+logs/
+*.log
+payroll_delivery_logs.csv
+
+# Generated Output Documents
+GeneratedPdfs/
+
+# Spreadsheets (Allow only the mock sample template)
+*.xlsx
+*.xls
+!sample_payroll.xlsx
+
+# macOS System Files
+.DS_Store
+
+# Secrets & Environment Configurations
+.env
+.env.*
+
+# IDE Configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
