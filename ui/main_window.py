@@ -157,3 +157,13 @@ class MainWindow(QMainWindow):
         self.send_text_tab.refresh_data()
         self.send_pdf_tab.refresh_data()
         self.logs_tab.load_logs()
+
+    def closeEvent(self, event):
+        """Clean up active background worker threads when closing window."""
+        for tab in (self.upload_tab, self.wageslips_tab, self.send_text_tab, self.send_pdf_tab, self.settings_tab):
+            if hasattr(tab, "cleanup_workers"):
+                try:
+                    tab.cleanup_workers()
+                except Exception:
+                    pass
+        event.accept()

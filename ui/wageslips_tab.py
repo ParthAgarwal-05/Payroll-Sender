@@ -58,7 +58,15 @@ class WageSlipsTab(QWidget):
         
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search by Employee, Phone, Workman ID, Month, UAN...")
-        self.search_input.textChanged.connect(self.load_records)
+        
+        # Debounce database searches to prevent UI lagging on keystrokes
+        from PySide6.QtCore import QTimer
+        self.search_timer = QTimer(self)
+        self.search_timer.setSingleShot(True)
+        self.search_timer.setInterval(300)
+        self.search_timer.timeout.connect(self.load_records)
+        self.search_input.textChanged.connect(self.search_timer.start)
+        
         filter_layout.addWidget(self.search_input)
 
         self.refresh_btn = QPushButton("Refresh")
@@ -136,8 +144,8 @@ class WageSlipsTab(QWidget):
 
         session = get_session()
         try:
-            # Query payroll records for selected month
-            query = session.query(PayrollRecord).filter_by(month_year=selected_month)
+            from sqlalchemy.orm import joinedload
+            query = session.query(PayrollRecord).options(joinedload(PayrollRecord.employee)).filter_by(month_year=selected_month)
             
             # Retrieve all matching rows
             records = query.all()
@@ -342,6 +350,14 @@ class WageSlipsTab(QWidget):
     def on_regen_finished(self):
         """PDF regeneration completed successfully."""
         self.progress_bar.setVisible(False)
+        failures = getattr(self.pdf_worker, "failures", [])
+        if failures:
+            fail_msg = "\n".join([f"• Record ID {rid}: {err}" for rid, err in failures])
+            QMessageBox.warning(
+                self, "Regeneration Completed with Warnings",
+                f"PDF regeneration completed.\n\n"
+                f"However, some PDF documents failed to generate:\n{fail_msg}"
+            )
         self.load_records()
         self.data_changed.emit()
 
@@ -368,6 +384,12 @@ class WageSlipsTab(QWidget):
             self.data_changed.emit()
         except Exception as e:
             QMessageBox.critical(self, "Deletion Failed", f"An error occurred while deleting:\n{str(e)}")
+
+    def cleanup_workers(self):
+        """Stop and join any active PDF generation workers."""
+        if hasattr(self, "pdf_worker") and self.pdf_worker and self.pdf_worker.isRunning():
+            self.pdf_worker.cancel()
+            self.pdf_worker.wait()
 
 
 def r_exists(path: str | None) -> bool:

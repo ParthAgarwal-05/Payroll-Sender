@@ -235,10 +235,19 @@ class UploadTab(QWidget):
 
     def on_pdf_generation_complete(self, count):
         """All synchronization and PDF generation completed."""
-        QMessageBox.information(
-            self, "Commit Succeeded",
-            f"Successfully synchronized database records and built {count} government wage slips."
-        )
+        failures = getattr(self.pdf_worker, "failures", [])
+        if failures:
+            fail_msg = "\n".join([f"• Record ID {rid}: {err}" for rid, err in failures])
+            QMessageBox.warning(
+                self, "Commit Succeeded with Warnings",
+                f"Successfully synchronized database records and built {count} government wage slips.\n\n"
+                f"However, {len(failures)} PDF generation tasks failed:\n{fail_msg}"
+            )
+        else:
+            QMessageBox.information(
+                self, "Commit Succeeded",
+                f"Successfully synchronized database records and built {count} government wage slips."
+            )
         self.data_changed.emit()
         self.reset_ui()
 
@@ -266,3 +275,14 @@ class UploadTab(QWidget):
         self.cancel_btn.setEnabled(False)
         self.commit_btn.setEnabled(False)
         self.reset_preview()
+
+    def cleanup_workers(self):
+        """Stop and join any active background worker threads."""
+        for attr in ("parse_worker", "sync_worker", "pdf_worker"):
+            worker = getattr(self, attr, None)
+            if worker and worker.isRunning():
+                if hasattr(worker, "cancel"):
+                    worker.cancel()
+                else:
+                    worker.terminate()
+                worker.wait()

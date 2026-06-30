@@ -340,9 +340,22 @@ class PdfService:
             filename = f"{record.pdf_uuid}.pdf"
             file_path = target_dir / filename
             
-            # Write to disk
-            with open(file_path, "wb") as f:
-                f.write(pdf_bytes)
+            # Write to disk atomically using temporary file in the same folder
+            import os
+            temp_file_path = file_path.with_name(f".{file_path.name}.tmp")
+            try:
+                with open(temp_file_path, "wb") as f:
+                    f.write(pdf_bytes)
+                    f.flush()
+                    os.fsync(f.fileno())
+                temp_file_path.replace(file_path)
+            except Exception as e:
+                if temp_file_path.exists():
+                    try:
+                        temp_file_path.unlink()
+                    except Exception:
+                        pass
+                raise e
 
             # Update payroll record in DB
             record.pdf_path = str(file_path.resolve())

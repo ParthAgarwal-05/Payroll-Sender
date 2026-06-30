@@ -348,13 +348,17 @@ class WhatsAppService:
         self.logger.debug("Variables Found:\n[%s]", ",\n".join(variables))
         self.logger.debug("Resolved Values:")
         for r_line in resolved_log:
-            self.logger.debug(r_line)
+            parts = r_line.split(" -> ", 1)
+            if len(parts) == 2:
+                self.logger.debug("%s -> ***MASKED***", parts[0])
+            else:
+                self.logger.debug(r_line)
         self.logger.debug("Final WhatsApp Parameters:")
         formatted_params = []
         for p in parameters:
             formatted_params.append({
                 "type": p["type"],
-                "text": p["text"]
+                "text": "***MASKED***"
             })
         self.logger.debug(json.dumps(formatted_params, indent=2))
         self.logger.debug("==========================================")
@@ -520,6 +524,33 @@ class WhatsAppService:
         }
         return payload
 
+    def _mask_payload(self, payload: dict) -> str:
+        """Create a deep copy of payload and mask all sensitive values for safe logging."""
+        import copy
+        try:
+            payload_copy = copy.deepcopy(payload)
+            # Mask recipient phone number
+            if "to" in payload_copy:
+                to_val = str(payload_copy["to"])
+                payload_copy["to"] = to_val[:3] + "******" + to_val[-3:] if len(to_val) > 6 else "******"
+            
+            # Mask parameters inside components
+            components = payload_copy.get("template", {}).get("components", [])
+            for comp in components:
+                params = comp.get("parameters", [])
+                for param in params:
+                    if "text" in param:
+                        param["text"] = "***MASKED***"
+                    if "document" in param:
+                        doc = param["document"]
+                        if "filename" in doc:
+                            doc["filename"] = "***MASKED***"
+                        if "id" in doc:
+                            doc["id"] = "***MASKED_ID***"
+            return json.dumps(payload_copy, indent=2)
+        except Exception:
+            return "{\n  \"masked_error\": \"could not mask payload\"\n}"
+
     def send_raw_text(self, phone: str, record: Any, template_def: Optional[dict] = None) -> dict:
         """Send a template text message to a specific phone number."""
         try:
@@ -529,7 +560,7 @@ class WhatsAppService:
             return {"success": False, "message_id": "", "error": str(val_err)}
 
         # Logging metadata and payload immediately before the POST request
-        serialized_json = json.dumps(payload, indent=2)
+        serialized_json = self._mask_payload(payload)
         self.logger.debug("--- SENDING METADATA & PAYLOAD ---")
         self.logger.debug("API URL: %s", self.api_url)
         self.logger.debug("Serialized JSON Payload sent over HTTP:\n%s", serialized_json)
@@ -672,7 +703,7 @@ class WhatsAppService:
             return {"success": False, "message_id": "", "error": str(val_err)}
 
         # Logging payload (Requirement 8)
-        serialized_json = json.dumps(payload, indent=2)
+        serialized_json = self._mask_payload(payload)
         self.logger.debug("--- SENDING METADATA & PAYLOAD ---")
         self.logger.debug("API URL: %s", self.api_url)
         self.logger.debug("Serialized JSON Payload sent over HTTP:\n%s", serialized_json)

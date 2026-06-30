@@ -51,18 +51,30 @@ class PdfGenerationWorker(QThread):
     def __init__(self, record_ids: list[int]):
         super().__init__()
         self.record_ids = record_ids
+        self._is_cancelled = False
+        self.failures = []
+
+    def cancel(self):
+        """Set cancellation flag to abort batch generation at the next iteration."""
+        self._is_cancelled = True
 
     def run(self):
-        try:
-            total = len(self.record_ids)
-            generated_count = 0
-            for idx, record_id in enumerate(self.record_ids):
+        import logging
+        logger = logging.getLogger("PdfGenerationWorker")
+        total = len(self.record_ids)
+        success_count = 0
+        self.failures = []
+        for idx, record_id in enumerate(self.record_ids):
+            if self._is_cancelled:
+                break
+            try:
                 PdfService.generate_and_save(record_id)
-                generated_count += 1
-                self.progress.emit(generated_count, total)
-            self.finished.emit(generated_count)
-        except Exception as e:
-            self.error.emit(str(e))
+                success_count += 1
+            except Exception as e:
+                logger.exception("Failed to generate PDF for record ID %d", record_id)
+                self.failures.append((record_id, str(e)))
+            self.progress.emit(idx + 1, total)
+        self.finished.emit(success_count)
 
 
 class WhatsAppSendWorker(QThread):
@@ -105,10 +117,14 @@ class WhatsAppSendWorker(QThread):
                 finally:
                     session.close()
 
-                if self.send_type == "text":
-                    success, err = whatsapp_service.send_text_with_retry_and_db_logging(record_id)
-                else:
-                    success, err = whatsapp_service.send_pdf_with_retry_and_db_logging(record_id)
+                try:
+                    if self.send_type == "text":
+                        success, err = whatsapp_service.send_text_with_retry_and_db_logging(record_id)
+                    else:
+                        success, err = whatsapp_service.send_pdf_with_retry_and_db_logging(record_id)
+                except Exception as ex:
+                    success = False
+                    err = f"Unexpected thread exception: {str(ex)}"
 
                 if success:
                     success_count += 1

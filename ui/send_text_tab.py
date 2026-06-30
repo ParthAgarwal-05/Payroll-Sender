@@ -53,7 +53,15 @@ class SendTextTab(QWidget):
         
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search by Employee Name, Phone, Workman ID...")
-        self.search_input.textChanged.connect(self.load_records)
+        
+        # Debounce database searches to prevent UI lagging on keystrokes
+        from PySide6.QtCore import QTimer
+        self.search_timer = QTimer(self)
+        self.search_timer.setSingleShot(True)
+        self.search_timer.setInterval(300)
+        self.search_timer.timeout.connect(self.load_records)
+        self.search_input.textChanged.connect(self.search_timer.start)
+        
         filter_layout.addWidget(self.search_input)
 
         self.refresh_btn = QPushButton("Refresh")
@@ -155,7 +163,13 @@ class SendTextTab(QWidget):
 
         session = get_session()
         try:
-            records = session.query(PayrollRecord).filter_by(month_year=selected_month).all()
+            from sqlalchemy.orm import joinedload
+            records = (
+                session.query(PayrollRecord)
+                .options(joinedload(PayrollRecord.employee))
+                .filter_by(month_year=selected_month)
+                .all()
+            )
             
             # Filter rows locally
             filtered_records = []
@@ -381,3 +395,9 @@ class SendTextTab(QWidget):
             session.close()
 
         self.start_batch_sending(record_ids)
+
+    def cleanup_workers(self):
+        """Stop and join any active sending workers."""
+        if hasattr(self, "worker") and self.worker and self.worker.isRunning():
+            self.worker.cancel()
+            self.worker.wait()

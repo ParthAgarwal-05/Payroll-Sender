@@ -57,6 +57,10 @@ def mask_pii(text: str) -> str:
     """
     if not text:
         return text
+    # Mask Bearer tokens and access tokens
+    text = re.sub(r'(Bearer\s+)[a-zA-Z0-9_\-\.]+', r'\1***MASKED_TOKEN***', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bEAA[a-zA-Z0-9]{30,}\b', '***MASKED_TOKEN***', text)
+    
     # Mask phone-like sequences (10+ digits)
     text = re.sub(r'\+?\d{10,}', lambda m: m.group()[:3] + '****' + m.group()[-3:], text)
     # Mask values after sensitive keywords
@@ -66,6 +70,13 @@ def mask_pii(text: str) -> str:
         text = re.sub(
             rf'("{keyword}"\s*:\s*")([^"]+)(")',
             rf'\1***MASKED***\3',
+            text,
+            flags=re.IGNORECASE,
+        )
+        # Plain text formats like keyword: value or keyword = value
+        text = re.sub(
+            rf'\b({keyword})\s*[:=]\s*([^\s,;]+)',
+            rf'\1: ***MASKED***',
             text,
             flags=re.IGNORECASE,
         )

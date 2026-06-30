@@ -79,13 +79,31 @@ class PayrollService:
         Updates employee profiles, inserts/updates payroll records, and
         returns a list of payroll record IDs that require PDF generation.
         """
-        from sqlalchemy import func
         from utils.excel_parser import clean_workman_id
+        from utils.phone_utils import normalize_phone
 
         session = get_session()
         record_ids_to_generate = []
         processed_in_batch = set()
         try:
+            # 1. Preload all active employees and build lookup maps
+            all_employees = session.query(Employee).all()
+            emp_by_workman = {}
+            emp_by_name = {}
+            for e in all_employees:
+                if e.workman_id:
+                    emp_by_workman[e.workman_id.upper()] = e
+                n_upper = e.name.strip().upper()
+                emp_by_name.setdefault(n_upper, []).append(e)
+
+            # 2. Preload relevant monthly payroll records for the batch periods
+            periods = {(row["month"], row["year"]) for row in valid_rows if "month" in row and "year" in row}
+            records_map = {}
+            for m, y in periods:
+                existing_records = session.query(PayrollRecord).filter_by(month=m, year=y).all()
+                for r in existing_records:
+                    records_map[(r.employee_id, r.month, r.year)] = r
+
             for row in valid_rows:
                 workman_id_raw = row.get("workman_id")
                 workman_id_clean = clean_workman_id(workman_id_raw)
@@ -99,21 +117,16 @@ class PayrollService:
                 bank_account = row["bank_account"]
                 guardian_name = row["guardian_name"]
                 
-                # 1. Sync Employee Profile
-                from utils.phone_utils import normalize_phone
+                # Normalize phone
                 phone_normalized, phone_valid, _ = normalize_phone(phone)
                 
                 employee = None
                 if workman_id_clean:
-                    employee = session.query(Employee).filter(
-                        func.upper(Employee.workman_id) == workman_id_clean.upper()
-                    ).first()
+                    employee = emp_by_workman.get(workman_id_clean.upper())
 
                 if not employee:
-                    # Match by name and normalized phone
-                    candidates = session.query(Employee).filter(
-                        func.upper(Employee.name) == name.strip().upper()
-                    ).all()
+                    # Match by name and phone candidates in memory
+                    candidates = emp_by_name.get(name.strip().upper(), [])
                     
                     for cand in candidates:
                         cand_norm, cand_valid, _ = normalize_phone(cand.phone)
@@ -131,6 +144,7 @@ class PayrollService:
                         else:
                             # Update employee's workman_id
                             employee.workman_id = workman_id_clean
+                            emp_by_workman[workman_id_clean.upper()] = employee
 
                 if not employee:
                     employee = Employee(
@@ -144,6 +158,12 @@ class PayrollService:
                         is_deleted=False
                     )
                     session.add(employee)
+                    session.flush() # Populate employee.id
+                    
+                    # Update maps
+                    if workman_id_clean:
+                        emp_by_workman[workman_id_clean.upper()] = employee
+                    emp_by_name.setdefault(name.strip().upper(), []).append(employee)
                 else:
                     # Update fields if changed
                     if employee.name != name: employee.name = name
@@ -163,10 +183,8 @@ class PayrollService:
                     continue
                 processed_in_batch.add(batch_key)
 
-                # 2. Sync Payroll Record
-                record = session.query(PayrollRecord).filter_by(
-                    employee_id=employee.id, month=month, year=year
-                ).first()
+                # Get record from in-memory records map
+                record = records_map.get((employee.id, month, year))
                 
                 # Prepare numeric comparisons & assignments
                 payroll_data = {
@@ -207,6 +225,8 @@ class PayrollService:
                         **payroll_data
                     )
                     session.add(record)
+                    session.flush() # Populate record.id
+                    records_map[(employee.id, month, year)] = record
                     needs_pdf_gen = True
                 else:
                     # Check if any values changed to trigger PDF regeneration

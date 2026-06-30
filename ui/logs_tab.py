@@ -48,7 +48,15 @@ class LogsTab(QWidget):
         
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search by Employee Name, Workman ID, Month...")
-        self.search_input.textChanged.connect(self.load_logs)
+        
+        # Debounce database searches to prevent UI lagging on keystrokes
+        from PySide6.QtCore import QTimer
+        self.search_timer = QTimer(self)
+        self.search_timer.setSingleShot(True)
+        self.search_timer.setInterval(300)
+        self.search_timer.timeout.connect(self.load_logs)
+        self.search_input.textChanged.connect(self.search_timer.start)
+        
         filter_layout.addWidget(self.search_input)
 
         filter_layout.addWidget(QLabel("Message Type:"))
@@ -99,8 +107,10 @@ class LogsTab(QWidget):
         session = get_session()
         try:
             # Fetch all records with send attempts
+            from sqlalchemy.orm import joinedload
             records = (
                 session.query(PayrollRecord)
+                .options(joinedload(PayrollRecord.employee))
                 .filter((PayrollRecord.text_attempts > 0) | (PayrollRecord.pdf_attempts > 0))
                 .order_by(PayrollRecord.updated_at.desc())
                 .all()
@@ -207,22 +217,37 @@ class LogsTab(QWidget):
             return
 
         try:
-            with open(file_path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                # Write headers
-                writer.writerow(["Timestamp", "Employee Name", "Workman ID", "Phone", "Message Type", "Status", "Attempts", "Error Details"])
-                for log in self.log_items:
-                    time_str = log["time"].strftime("%d/%m/%Y %H:%M:%S") if isinstance(log["time"], datetime) else str(log["time"])
-                    writer.writerow([
-                        time_str,
-                        log["name"],
-                        log["workman_id"] or "",
-                        mask_pii(log["phone"]),
-                        log["type"],
-                        log["status"],
-                        log["attempts"],
-                        mask_pii(log["error"])
-                    ])
+            import os
+            from pathlib import Path
+            file_path_obj = Path(file_path)
+            temp_path = file_path_obj.with_name(f".{file_path_obj.name}.tmp")
+            try:
+                with open(temp_path, "w", newline="", encoding="utf-8") as f:
+                    writer = csv.writer(f)
+                    # Write headers
+                    writer.writerow(["Timestamp", "Employee Name", "Workman ID", "Phone", "Message Type", "Status", "Attempts", "Error Details"])
+                    for log in self.log_items:
+                        time_str = log["time"].strftime("%d/%m/%Y %H:%M:%S") if isinstance(log["time"], datetime) else str(log["time"])
+                        writer.writerow([
+                            time_str,
+                            log["name"],
+                            log["workman_id"] or "",
+                            mask_pii(log["phone"]),
+                            log["type"],
+                            log["status"],
+                            log["attempts"],
+                            mask_pii(log["error"])
+                        ])
+                    f.flush()
+                    os.fsync(f.fileno())
+                temp_path.replace(file_path_obj)
+            except Exception as e:
+                if temp_path.exists():
+                    try:
+                        temp_path.unlink()
+                    except Exception:
+                        pass
+                raise e
             QMessageBox.information(self, "Export Succeeded", f"Delivery logs successfully exported to:\n{file_path}")
         except Exception as e:
             QMessageBox.critical(self, "Export Failed", f"An error occurred while writing CSV:\n{str(e)}")

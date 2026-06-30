@@ -111,6 +111,20 @@ class SettingsTab(QWidget):
         app_form.addRow("Theme Selector:", self.theme_combo)
         form_layout.addWidget(app_group)
 
+        # --- Group 5: Database Maintenance ---
+        db_group = QGroupBox("Database Maintenance")
+        db_layout = QHBoxLayout(db_group)
+        
+        self.backup_btn = QPushButton("Backup Database")
+        self.backup_btn.clicked.connect(self.backup_db_clicked)
+        db_layout.addWidget(self.backup_btn)
+        
+        self.restore_btn = QPushButton("Restore Database")
+        self.restore_btn.clicked.connect(self.restore_db_clicked)
+        db_layout.addWidget(self.restore_btn)
+        
+        form_layout.addWidget(db_group)
+
         scroll.setWidget(scroll_content)
         main_layout.addWidget(scroll)
 
@@ -226,3 +240,62 @@ class SettingsTab(QWidget):
         self.test_btn.setText("Test Connection")
         QMessageBox.critical(self, "Test Failed", f"An exception occurred during testing:\n{err_msg}")
         self.test_worker = None
+
+    def cleanup_workers(self):
+        """Stop and join any active test workers."""
+        if hasattr(self, "test_worker") and self.test_worker and self.test_worker.isRunning():
+            self.test_worker.terminate()
+            self.test_worker.wait()
+
+    def backup_db_clicked(self):
+        """Manual database backup handler."""
+        from database.db import get_db_path
+        from database.backup import create_backup
+        
+        db_path = get_db_path()
+        backup_dir = db_path.parent / "backups"
+        try:
+            backup_path = create_backup(db_path, backup_dir, prefix="manual")
+            QMessageBox.information(
+                self, "Backup Succeeded",
+                f"Database backup created and verified successfully:\n\n{backup_path.name}"
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Backup Failed", f"An error occurred during database backup:\n{str(e)}")
+
+    def restore_db_clicked(self):
+        """Manual database restore handler."""
+        from database.db import get_db_path
+        from database.backup import restore_db
+        
+        confirm = QMessageBox.question(
+            self, "Confirm Database Restore",
+            "WARNING: Restoring the database will overwrite all current settings, employee records, and payroll data.\n\n"
+            "Are you sure you want to proceed with the restore?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if confirm == QMessageBox.No:
+            return
+            
+        db_path = get_db_path()
+        backup_dir = db_path.parent / "backups"
+        
+        from PySide6.QtWidgets import QFileDialog
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Select Backup File to Restore",
+            str(backup_dir), "SQLite Database (*.db)"
+        )
+        if not file_path:
+            return
+            
+        from pathlib import Path
+        try:
+            restore_db(Path(file_path), db_path)
+            # Reload fields in the UI
+            self.load_settings()
+            # Refresh other tabs if MainWindow exists
+            if hasattr(self.window(), "refresh_all_tabs"):
+                self.window().refresh_all_tabs()
+            QMessageBox.information(self, "Restore Succeeded", "Database restored successfully.")
+        except Exception as e:
+            QMessageBox.critical(self, "Restore Failed", f"An error occurred during database restore:\n{str(e)}")

@@ -220,3 +220,61 @@ class TestProductionHardening(unittest.TestCase):
             # If the migration setup does not run due to needs_migration being False in the test,
             # force-trigger and test binding.
             pass
+
+    def test_database_backup_and_restore(self):
+        """8. Verify database backup creation, verification, and restore safety."""
+        from database.db import get_db_path
+        from database.backup import create_backup, restore_db, verify_integrity
+        from pathlib import Path
+        import shutil
+
+        db_path = get_db_path()
+        backup_dir = db_path.parent / "test_backups"
+        if backup_dir.exists():
+            shutil.rmtree(backup_dir)
+        backup_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            # Create a backup
+            backup_file = create_backup(db_path, backup_dir, prefix="test_manual")
+            self.assertTrue(backup_file.exists())
+            self.assertTrue(verify_integrity(backup_file))
+
+            # Restore the backup
+            restore_db(backup_file, db_path)
+            self.assertTrue(verify_integrity(db_path))
+        finally:
+            if backup_dir.exists():
+                shutil.rmtree(backup_dir)
+
+    def test_database_integrity_verification_positive(self):
+        """9. Verify positive integrity check on a valid database."""
+        from database.db import get_db_path
+        from database.backup import verify_integrity
+        db_path = get_db_path()
+        self.assertTrue(verify_integrity(db_path))
+
+    @patch("services.pdf_service.PdfService.generate_and_save")
+    def test_pdf_worker_fault_tolerance(self, mock_generate):
+        """10. Verify that PDF generation worker continues on failures and collects them."""
+        # Setup mock to fail for even record IDs and succeed for odd ones
+        def mock_generate_side_effect(record_id):
+            if record_id % 2 == 0:
+                raise ValueError(f"Generation error for record {record_id}")
+            return f"dummy/path/{record_id}.pdf"
+        mock_generate.side_effect = mock_generate_side_effect
+
+        from workers.qthreads import PdfGenerationWorker
+        record_ids = [101, 102, 103, 104]
+        worker = PdfGenerationWorker(record_ids)
+
+        # Run synchronously for test simplicity
+        worker.run()
+
+        # Should generate 2 successes (101, 103) and 2 failures (102, 104)
+        self.assertEqual(len(worker.failures), 2)
+        failures_dict = dict(worker.failures)
+        self.assertIn(102, failures_dict)
+        self.assertIn(104, failures_dict)
+        self.assertIn("Generation error for record 102", failures_dict[102])
+        self.assertIn("Generation error for record 104", failures_dict[104])

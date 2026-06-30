@@ -24,11 +24,44 @@ def get_db_path() -> Path:
     return db_dir / "payroll.db"
 
 
+def dispose_engine() -> None:
+    """Dispose the global engine and clear session maker (required for DB restore)."""
+    global _engine, _SessionLocal
+    if _engine:
+        try:
+            _engine.dispose()
+        except Exception:
+            pass
+        _engine = None
+    _SessionLocal = None
+
+
 def init_database() -> None:
     """Initialize the SQLite engine and create tables if they do not exist."""
     global _engine, _SessionLocal
+    
+    # Force load models to ensure table registration on Base.metadata
+    import database.models
+    
     db_path = get_db_path()
     
+    # Run SQLite integrity check on startup
+    if db_path.exists():
+        from database.backup import verify_integrity
+        if not verify_integrity(db_path):
+            logger.critical("Database integrity check failed! The database file is corrupted.")
+            raise RuntimeError("Database integrity verification failed: The database file is corrupted.")
+
+    # Create backup before running migrations
+    if db_path.exists():
+        try:
+            from database.backup import create_backup
+            backup_dir = db_path.parent / "backups"
+            create_backup(db_path, backup_dir, prefix="pre_migration")
+            logger.info("Pre-migration backup completed successfully.")
+        except Exception as e:
+            logger.error("Could not complete automatic pre-migration database backup: %s", e)
+            
     # Create SQLAlchemy engine for SQLite with thread-safety parameters
     # check_same_thread=False is safe because we serialise writes or use sessions appropriately
     _engine = create_engine(

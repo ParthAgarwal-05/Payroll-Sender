@@ -14,6 +14,10 @@ def main():
     logger.info("Starting Payroll Manager Desktop Application...")
 
     try:
+        # Launch PySide6 GUI QApplication first to allow early GUI error notifications
+        app = QApplication(sys.argv)
+        app.setStyle("Fusion")
+
         # 2. Setup SQLite Database and SQLAlchemy tables
         init_database()
         logger.info("SQLite database schema initialized successfully.")
@@ -21,12 +25,6 @@ def main():
         # 3. Reload settings from DB table to environment variables
         SettingsManager.load_to_env()
         logger.info("Application configuration reloaded from settings table.")
-
-        # 4. Launch PySide6 GUI QApplication
-        app = QApplication(sys.argv)
-        
-        # We can set an application-wide stylesheet / styling configurations if needed
-        app.setStyle("Fusion")
         
         window = MainWindow()
         window.show()
@@ -36,6 +34,12 @@ def main():
 
     except Exception as e:
         logger.critical("Fatal crash during startup: %s", e, exc_info=True)
+        if QApplication.instance():
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.critical(
+                None, "Fatal Startup Error",
+                f"The application encountered a fatal error during startup:\n\n{str(e)}\n\nPlease restore the database from a backup or contact support."
+            )
         sys.exit(1)
 
 
