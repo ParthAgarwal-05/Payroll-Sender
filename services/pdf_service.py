@@ -8,7 +8,7 @@ from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 from database.db import get_session
@@ -130,16 +130,16 @@ def generate_wage_slip(payroll: Any, company_info: dict[str, str]) -> bytes:
         # 4: Name of Establishment
         [Paragraph(f"Name of Establishment : {establishment}", label_style), "", "", "", ""],
         
-        # 5: Name of Principal Employer / Workman ID label
-        [Paragraph(f"Name of Principal Employer : {principal_employer}", label_style), "", "", "", Paragraph("Workman ID", label_style)],
+        # 5: Name of Principal Employer
+        [Paragraph(f"Name of Principal Employer : {principal_employer}", label_style), "", "", "", ""],
         
-        # 6: Address / Period / Workman ID value
+        # 6: Address / Period
         [
             Paragraph(f"Address: {address}", label_style),
             "",
             Paragraph("Period:", label_style),
             Paragraph(wage_period, value_style),
-            Paragraph(workman_id, value_style)
+            ""
         ],
         
         # 7: Name of Employee
@@ -219,8 +219,9 @@ def generate_wage_slip(payroll: Any, company_info: dict[str, str]) -> bytes:
             ("SPAN", (0, 2), (4, 2)),  # (See rule 156)
             ("SPAN", (0, 3), (4, 3)),  # Date of issue
             ("SPAN", (0, 4), (4, 4)),  # Name of Establishment
-            ("SPAN", (0, 5), (3, 5)),  # Principal Employer
+            ("SPAN", (0, 5), (4, 5)),  # Principal Employer
             ("SPAN", (0, 6), (1, 6)),  # Address
+            ("SPAN", (3, 6), (4, 6)),  # Period value
             
             ("SPAN", (2, 7), (4, 7)),   # Employee Name
             ("SPAN", (2, 8), (4, 8)),   # Guardian Name
@@ -254,6 +255,35 @@ def generate_wage_slip(payroll: Any, company_info: dict[str, str]) -> bytes:
     )
 
     story.append(table)
+    
+    # Modest white space after table
+    story.append(Spacer(1, 15))
+    
+    # Create the signature table right-aligned
+    signature_style = ParagraphStyle(
+        "SignatureStyle",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        leading=14,
+        alignment=1,  # Center text relative to its column
+        textColor=colors.black,
+    )
+    sig_data = [
+        [""],
+        [Paragraph("Employer / Pay-in-charge", signature_style)],
+        [Paragraph("Signature", signature_style)]
+    ]
+    sig_table = Table(sig_data, colWidths=[200], rowHeights=[40, 18, 18], hAlign='RIGHT')
+    sig_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LINEABOVE', (0, 1), (0, 1), 1, colors.black),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    
+    story.append(sig_table)
     doc.build(story)
     
     pdf_bytes = buffer.getvalue()

@@ -867,11 +867,10 @@ class WhatsAppService:
         
         result = {"success": False, "message_id": "", "error": "Attempt limit reached"}
         
-        # Determine dynamic filename (Requirement 3)
+        # Determine dynamic filename (friendly filename from employee name only)
         import re
         clean_emp_name = re.sub(r"[^a-zA-Z0-9_-]", "_", record.employee_name.strip())
-        clean_month_year = record.month_year.replace(" ", "_")
-        dynamic_filename = f"{clean_emp_name}_{clean_month_year}.pdf"
+        dynamic_filename = f"{clean_emp_name}.pdf"
 
         # Check existing media_id from DB record (Requirement 5)
         media_id = record.pdf_media_id or ""
