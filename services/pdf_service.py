@@ -88,15 +88,6 @@ def generate_wage_slip(payroll: Any, company_info: dict[str, str]) -> bytes:
         alignment=1,  # Center
         textColor=colors.black,
     )
-    right_align_style = ParagraphStyle(
-        "RightStyle",
-        parent=styles["Normal"],
-        fontName="Helvetica-Bold",
-        fontSize=9,
-        leading=12,
-        alignment=2,  # Right
-        textColor=colors.black,
-    )
 
     # Fetch values directly from the stored DB record
     issue_date = getattr(payroll, "issue_date", "") or ""
@@ -215,16 +206,7 @@ def generate_wage_slip(payroll: Any, company_info: dict[str, str]) -> bytes:
         ],
         
         # 20: Net wages paid
-        [Paragraph("12.", label_style), Paragraph("Net wages paid:", label_style), Paragraph(net_wages_str, value_style), "", ""],
-        
-        # 21: Signature block
-        [
-            "",
-            "",
-            "",
-            Paragraph("Digitally Signed<br/>Employer / Pay-in-charge", right_align_style),
-            ""
-        ]
+        [Paragraph("12.", label_style), Paragraph("Net wages paid:", label_style), Paragraph(net_wages_str, value_style), "", ""]
     ]
 
     col_widths = [25, 175, 110, 110, 112]
@@ -258,9 +240,6 @@ def generate_wage_slip(payroll: Any, company_info: dict[str, str]) -> bytes:
             ("SPAN", (1, 18), (1, 19)), # Total deductions label
             
             ("SPAN", (2, 20), (4, 20)), # Net wages
-            
-            ("SPAN", (0, 21), (2, 21)), # Empty Col 0-2
-            ("SPAN", (3, 21), (4, 21)), # Signature text Col 3-4
             
             ("BOX", (0, 0), (-1, -1), 1.5, colors.black),
             ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.black),
