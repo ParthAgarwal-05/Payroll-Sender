@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-import os
+from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QApplication
 
@@ -63,8 +63,7 @@ class TestProductionHardening(unittest.TestCase):
                 # Verify builtins.open context manager was used and exited properly
                 mock_open.assert_any_call(dummy_path, "rb")
         finally:
-            if os.path.exists(dummy_path):
-                os.remove(dummy_path)
+            Path(dummy_path).unlink(missing_ok=True)
 
     def test_employee_matching_with_different_phone_formats(self):
         """3. Verify that employee profile matching normalizes phone numbers to prevent duplicates."""
@@ -185,9 +184,10 @@ class TestProductionHardening(unittest.TestCase):
             "ui/wageslips_tab.py"
         ]
         
+        project_root = Path(__file__).resolve().parents[1]
         for rel_path in files_to_check:
-            abs_path = os.path.join("/Users/parth-agarwal/Desktop/python-payroll", rel_path)
-            if not os.path.exists(abs_path):
+            abs_path = project_root / rel_path
+            if not abs_path.exists():
                 continue
             with open(abs_path, "r", encoding="utf-8") as f:
                 content = f.read()
