@@ -95,6 +95,11 @@ class WageSlipsTab(QWidget):
         self.table.verticalHeader().setDefaultSectionSize(52)
         layout.addWidget(self.table)
 
+        # Enable professional copy-paste and text selection (Task 1, 2)
+        from utils.copy_helpers import setup_table_copy, enable_selection_recursive
+        setup_table_copy(self.table)
+        enable_selection_recursive(self)
+
     def refresh_months(self):
         """Update distinct month list in the dropdown filter."""
         current = self.month_combo.currentText()

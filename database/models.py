@@ -1,6 +1,6 @@
 """SQLAlchemy models for Employees, Payroll Records, and Settings."""
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, func
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, func, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database.db import Base
 
@@ -28,6 +28,9 @@ class Employee(Base):
 class PayrollRecord(Base):
     """Monthly payroll details, PDF metadata, and WhatsApp statuses for one employee."""
     __tablename__ = "payroll_records"
+    __table_args__ = (
+        UniqueConstraint("workman_id", "month", "year", name="uq_workman_month_year"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     workman_id = Column(String, ForeignKey("employees.workman_id"), nullable=False)

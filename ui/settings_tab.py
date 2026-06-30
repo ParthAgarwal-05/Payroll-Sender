@@ -132,6 +132,10 @@ class SettingsTab(QWidget):
         # Initial Load
         self.load_settings()
 
+        # Enable text selection on all QLabels (Task 1)
+        from utils.copy_helpers import enable_selection_recursive
+        enable_selection_recursive(self)
+
     def load_settings(self):
         """Read settings values from SQLite table and populate the form fields."""
         settings = SettingsManager.get_all()

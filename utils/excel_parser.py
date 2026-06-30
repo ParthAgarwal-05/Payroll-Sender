@@ -15,7 +15,11 @@ def parse_month_year(val: Any) -> tuple[str, int] | None:
     - String like "06/2026", "06-2026", "June 2026", "June-2026"
     """
     if isinstance(val, (datetime, date)):
-        return val.strftime("%B"), val.year
+        english_months = [
+            "", "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+        return english_months[val.month], val.year
 
     if not val:
         return None
@@ -109,6 +113,7 @@ def parse_payroll_excel(file_bytes: bytes) -> tuple[list[dict[str, Any]], list[d
     """
     valid_rows = []
     invalid_rows = []
+    seen_employees = set()
 
     try:
         import openpyxl
@@ -183,6 +188,14 @@ def parse_payroll_excel(file_bytes: bytes) -> tuple[list[dict[str, Any]], list[d
             row_data["month_year"] = f"{month_name} {year_val}"
             row_data["month"] = month_name
             row_data["year"] = year_val
+            
+            # Check for duplicate employee record within the same Excel sheet
+            if "workman_id" in row_data and row_data["workman_id"]:
+                dup_key = (row_data["workman_id"].strip().upper(), month_name, year_val)
+                if dup_key in seen_employees:
+                    errors.append("Duplicate employee entry for the same month/year in sheet")
+                else:
+                    seen_employees.add(dup_key)
 
         # Read attendance
         att_val = row[header_mapping["attendance"]].value

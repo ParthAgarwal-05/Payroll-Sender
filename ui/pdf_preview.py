@@ -51,7 +51,19 @@ class PdfPreviewDialog(QDialog):
         self.open_sys_btn.clicked.connect(self.open_in_system)
         toolbar.addWidget(self.open_sys_btn)
 
-        self.open_folder_btn = QPushButton("Open Folder")
+        self.copy_path_btn = QPushButton("Copy PDF Path")
+        self.copy_path_btn.clicked.connect(self.copy_path)
+        toolbar.addWidget(self.copy_path_btn)
+
+        self.copy_name_btn = QPushButton("Copy File Name")
+        self.copy_name_btn.clicked.connect(self.copy_file_name)
+        toolbar.addWidget(self.copy_name_btn)
+
+        self.copy_loc_btn = QPushButton("Copy File Location")
+        self.copy_loc_btn.clicked.connect(self.copy_file_location)
+        toolbar.addWidget(self.copy_loc_btn)
+
+        self.open_folder_btn = QPushButton("Open Containing Folder")
         self.open_folder_btn.clicked.connect(self.open_parent_folder)
         toolbar.addWidget(self.open_folder_btn)
 
@@ -63,6 +75,8 @@ class PdfPreviewDialog(QDialog):
         
         layout.addLayout(toolbar)
 
+        from utils.copy_helpers import enable_label_selection, copy_to_clipboard
+
         # Embedded PDF view or fallback
         if PDF_VIEWER_AVAILABLE and os.path.exists(self.pdf_path):
             self.document = QPdfDocument(self)
@@ -71,6 +85,13 @@ class PdfPreviewDialog(QDialog):
             self.view = QPdfView(self)
             self.view.setDocument(self.document)
             self.view.setPageMode(QPdfView.PageMode.SinglePage)
+            
+            # Enable text selection inside view if supported
+            try:
+                self.view.setSelectionMode(QPdfView.SelectionMode.Text)
+            except Exception:
+                pass
+                
             layout.addWidget(self.view)
         else:
             # Fallback when plugins missing or path incorrect
@@ -85,15 +106,49 @@ class PdfPreviewDialog(QDialog):
             path_lbl.setWordWrap(True)
             path_lbl.setStyleSheet("color: #71717a; font-family: monospace;")
             path_lbl.setAlignment(Qt.AlignCenter)
+            enable_label_selection(path_lbl)
             
             fallback_layout.addWidget(lbl)
             fallback_layout.addWidget(path_lbl)
-            
             layout.addLayout(fallback_layout)
             
             # Automatically try to launch system default viewer
             if os.path.exists(self.pdf_path):
                 open_file_in_default_viewer(self.pdf_path)
+
+        # Metadata Row (Selectable)
+        self.meta_lbl = QLabel()
+        self.meta_lbl.setWordWrap(True)
+        self.meta_lbl.setStyleSheet("color: #a1a1aa; font-family: monospace; font-size: 11px; padding: 4px; background-color: #1a1a1e; border-radius: 4px;")
+        
+        meta_text = f"File Path: {self.pdf_path}"
+        if PDF_VIEWER_AVAILABLE and os.path.exists(self.pdf_path):
+            meta_text += f" | Pages: {self.document.pageCount()}"
+            try:
+                title = self.document.metaData(QPdfDocument.MetaDataField.Title)
+                if title:
+                    meta_text += f" | Title: {title}"
+            except Exception:
+                pass
+                
+        self.meta_lbl.setText(meta_text)
+        enable_label_selection(self.meta_lbl)
+        layout.addWidget(self.meta_lbl)
+
+    def copy_path(self):
+        """Copy PDF file path to clipboard."""
+        from utils.copy_helpers import copy_to_clipboard
+        copy_to_clipboard(self.pdf_path)
+
+    def copy_file_name(self):
+        """Copy PDF file name to clipboard."""
+        from utils.copy_helpers import copy_to_clipboard
+        copy_to_clipboard(Path(self.pdf_path).name)
+
+    def copy_file_location(self):
+        """Copy containing folder path to clipboard."""
+        from utils.copy_helpers import copy_to_clipboard
+        copy_to_clipboard(str(Path(self.pdf_path).parent))
 
     def open_in_system(self):
         """Trigger opening in the OS default viewer."""

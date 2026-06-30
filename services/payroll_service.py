@@ -81,9 +81,19 @@ class PayrollService:
         """
         session = get_session()
         record_ids_to_generate = []
+        processed_in_batch = set()
         try:
             for row in valid_rows:
                 workman_id = row["workman_id"]
+                month = row["month"]
+                year = row["year"]
+
+                batch_key = (workman_id, month, year)
+                if batch_key in processed_in_batch:
+                    logger.warning("Duplicate record in batch ignored: Employee %s, Period %s/%s", workman_id, month, year)
+                    continue
+                processed_in_batch.add(batch_key)
+
                 name = row["employee_name"]
                 phone = row["phone"]
                 designation = row["designation"]

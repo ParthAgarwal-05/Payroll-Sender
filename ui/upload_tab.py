@@ -63,6 +63,11 @@ class UploadTab(QWidget):
         self.preview_table.setAlternatingRowColors(True)
         layout.addWidget(self.preview_table)
 
+        # Enable professional copy-paste and text selection (Task 1, 2)
+        from utils.copy_helpers import setup_table_copy, enable_selection_recursive
+        setup_table_copy(self.preview_table)
+        enable_selection_recursive(self)
+
         # Summary Statistics Layout
         self.stats_lbl = QLabel("")
         self.stats_lbl.setStyleSheet("font-weight: bold; color: #ffffff;")

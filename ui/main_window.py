@@ -117,6 +117,10 @@ class MainWindow(QMainWindow):
         # Select first tab by default
         self.on_nav_clicked(0)
 
+        # Enable text selection on all QLabels globally inside main window container (Task 1)
+        from utils.copy_helpers import enable_selection_recursive
+        enable_selection_recursive(self)
+
     def setup_signals(self):
         """Bind custom signals to keep different tabs synchronized when database commits occur."""
         # When upload commits data, refresh other views

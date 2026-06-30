@@ -98,6 +98,11 @@ class DashboardTab(QWidget):
         self.activity_table.setAlternatingRowColors(True)
         layout.addWidget(self.activity_table)
 
+        # Enable professional copy-paste and text selection (Task 1, 2)
+        from utils.copy_helpers import setup_table_copy, enable_selection_recursive
+        setup_table_copy(self.activity_table)
+        enable_selection_recursive(self)
+
     def refresh_months_list(self):
         """Reload the distinct months from the database."""
         current = self.month_combo.currentText()
