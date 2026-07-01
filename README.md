@@ -21,10 +21,16 @@ Built using **Python 3.12+**, **PySide6 (Qt)**, **SQLAlchemy 2.x**, **SQLite**, 
 
 ## Screenshots
 
-*(Insert screenshots of your running application here)*
+<img width="1463" height="823" alt="Screenshot 2026-07-01 at 5 14 33 PM" src="https://github.com/user-attachments/assets/5c8263c6-c07c-4218-9980-3e814bd6c690" />
 - **Dashboard View**: Sleek dark theme featuring operational cards and recent activity logs.
+- 
+<img width="1462" height="832" alt="Screenshot 2026-07-01 at 5 12 53 PM" src="https://github.com/user-attachments/assets/452659a8-5c58-4740-a33b-163bf280ac65" />
 - **Upload Payroll**: Red/green highlighting showing calculation audits.
+- 
+<img width="1461" height="825" alt="Screenshot 2026-07-01 at 5 13 19 PM" src="https://github.com/user-attachments/assets/7ff44d20-2c3c-4a05-bd18-6b9738c5868b" />
 - **Wage Slips**: Excel-like spreadsheet table layout with detailed large action buttons.
+- 
+  <img width="1463" height="822" alt="Screenshot 2026-07-01 at 5 14 08 PM" src="https://github.com/user-attachments/assets/111f993a-a24f-45e9-a31b-894c99089470" />
 - **Settings Form**: Secure configuration fields for Meta credentials and directory structures.
 
 ---
@@ -101,8 +107,6 @@ source venv/bin/activate
 # Activate on Windows (Command Prompt):
 venv\Scripts\activate.bat
 
-# Activate on Windows (PowerShell):
-.\venv\Scripts\Activate.ps1
 ```
 
 ### 2. Install Requirements
