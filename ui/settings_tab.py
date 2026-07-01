@@ -164,7 +164,7 @@ class SettingsTab(QWidget):
         self.temp_name_input.setText(settings.get("TEMPLATE_NAME", ""))
         self.pdf_temp_name_input.setText(settings.get("PDF_TEMPLATE_NAME", ""))
         self.temp_lang_input.setText(settings.get("TEMPLATE_LANGUAGE", ""))
-        self.pdf_dir_input.setText(settings.get("PDF_OUTPUT_DIR", "GeneratedPdfs"))
+        self.pdf_dir_input.setText(settings.get("PDF_OUTPUT_DIR", ""))
 
         # Floats and Ints
         try:

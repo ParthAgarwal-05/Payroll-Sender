@@ -1,8 +1,32 @@
 """Manager for database-backed application settings."""
 
 import os
+import platform
+from pathlib import Path
 from database.db import get_session
 from database.models import Setting
+
+
+def get_default_pdf_dir() -> str:
+    """Determine dynamic Wageslips output path based on OS and execution context."""
+    # 1. Test environment override
+    override = os.environ.get("PAYROLL_DATA_DIR")
+    if override:
+        return str(Path(override) / "Wageslips")
+
+    # 2. Production defaults per platform
+    system = platform.system()
+    if system == "Windows":
+        base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+        pdf_dir = base / "Payroll Manager" / "Wageslips"
+    elif system == "Darwin":  # macOS
+        pdf_dir = Path.home() / "Library" / "Application Support" / "Payroll Manager" / "Wageslips"
+    else:  # Linux / standard XDG directories
+        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+        pdf_dir = base / "Payroll Manager" / "Wageslips"
+
+    return str(pdf_dir)
+
 
 DEFAULT_SETTINGS = {
     # WhatsApp Credentials
@@ -18,7 +42,7 @@ DEFAULT_SETTINGS = {
     "TEMPLATE_LANGUAGE": "en",
     
     # PDF Settings
-    "PDF_OUTPUT_DIR": "GeneratedPdfs",
+    "PDF_OUTPUT_DIR": get_default_pdf_dir(),
     
     # Rate Limiting & Retry
     "RATE_LIMIT_MPS": "1.0",

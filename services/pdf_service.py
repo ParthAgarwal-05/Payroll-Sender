@@ -313,7 +313,7 @@ class PdfService:
             }
 
             # Retrieve folder path from settings
-            base_dir_setting = SettingsManager.get("PDF_OUTPUT_DIR", "GeneratedPdfs")
+            base_dir_setting = SettingsManager.get("PDF_OUTPUT_DIR")
             base_dir = Path(base_dir_setting)
             
             # Format subfolders: Year / Month
