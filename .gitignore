@@ -28,7 +28,7 @@ payroll_delivery_logs.csv
 # Generated Output Documents
 GeneratedPdfs/
 Wageslips/
-
+installer/
 # Spreadsheets (Allow only the mock sample template)
 *.xlsx
 *.xls
