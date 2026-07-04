@@ -289,12 +289,6 @@ def parse_payroll_excel(file_bytes: bytes) -> tuple[list[dict[str, Any]], list[d
         if all(f in row_data for f in ("gross_wages", "net_wages", "pf", "esi", "other_deductions")):
             total_ded = row_data["pf"] + row_data["esi"] + row_data["other_deductions"]
             row_data["total_deductions"] = total_ded
-            expected_net = row_data["gross_wages"] - total_ded
-            if abs(expected_net - row_data["net_wages"]) > Decimal("0.01"):
-                errors.append(
-                    f"Net wages inconsistency: Gross ({row_data['gross_wages']}) - "
-                    f"Deductions ({total_ded}) must equal Net ({row_data['net_wages']})"
-                )
 
         # Formatting values for JSON/Preview output
         row_data_serialized = {}

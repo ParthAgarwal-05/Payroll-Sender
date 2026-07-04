@@ -60,7 +60,7 @@ class TestExcelParser(unittest.TestCase):
         self.assertEqual(valid[0]["phone"], "+919876543210")
         self.assertEqual(valid[0]["net_wages"], 11000.0)
 
-    def test_parse_payroll_excel_invalid_math(self):
+    def test_parse_payroll_excel_invalid_math_accepted(self):
         wb = openpyxl.Workbook()
         ws = wb.active
         
@@ -73,6 +73,7 @@ class TestExcelParser(unittest.TestCase):
         ws.append(headers)
         
         # Net wages mismatch: Gross 13000 - ded 2000 = 11000 (not 9000)
+        # This should now be parsed successfully and placed in the valid list.
         row_data = [
             "9876543210", "June 2026", "Establishment 1", "Employer 1", "Address 1",
             "John Doe", "EMP001", "Father Doe", "Worker", "UAN12345",
@@ -87,9 +88,9 @@ class TestExcelParser(unittest.TestCase):
         
         valid, invalid = parse_payroll_excel(excel_bytes)
         
-        self.assertEqual(len(valid), 0)
-        self.assertEqual(len(invalid), 1)
-        self.assertIn("Net wages inconsistency", invalid[0]["error"])
+        self.assertEqual(len(valid), 1)
+        self.assertEqual(len(invalid), 0)
+        self.assertEqual(valid[0]["net_wages"], 9000.0)
 
     def test_boundary_and_leap_years(self):
         # 1. Check boundary year/month parsing
