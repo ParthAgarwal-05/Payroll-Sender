@@ -12,6 +12,9 @@ on:
 permissions:
   contents: write
 
+env:
+  QT_QPA_PLATFORM: offscreen
+
 jobs:
   build:
     name: Build & Package Windows Installer
@@ -33,13 +36,13 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller pytest
 
-      - name: Run Test Suite
-        run: |
-          pytest
-
       - name: Generate Sample Assets
         run: |
           python scripts/generate_sample_excel.py
+
+      - name: Run Test Suite
+        run: |
+          python -m pytest
 
       - name: Build Executable with PyInstaller
         run: |
@@ -48,10 +51,15 @@ jobs:
       - name: Install Inno Setup
         run: |
           choco install innosetup -y --no-progress
+          echo "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
 
       - name: Compile Inno Setup Installer
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" PayrollManagerInstaller.iss
+          if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
+            & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" PayrollManagerInstaller.iss
+          } else {
+            iscc PayrollManagerInstaller.iss
+          }
 
       - name: Upload Installer as Workflow Artifact
         uses: actions/upload-artifact@v4
