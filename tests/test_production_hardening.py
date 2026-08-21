@@ -278,3 +278,13 @@ class TestProductionHardening(unittest.TestCase):
         self.assertIn(104, failures_dict)
         self.assertIn("Generation error for record 102", failures_dict[102])
         self.assertIn("Generation error for record 104", failures_dict[104])
+
+    @patch("PySide6.QtWidgets.QMessageBox.information")
+    def test_upload_tab_zero_records_completion(self, mock_info):
+        """11. Verify UploadTab handles on_sync_finished with 0 records without raising AttributeError."""
+        from ui.upload_tab import UploadTab
+        tab = UploadTab()
+        # Call on_sync_finished with empty list (no new records requiring PDF generation)
+        tab.on_sync_finished([])
+        mock_info.assert_called_once()
+

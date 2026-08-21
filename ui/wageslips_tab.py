@@ -352,7 +352,8 @@ class WageSlipsTab(QWidget):
     def on_regen_finished(self):
         """PDF regeneration completed successfully."""
         self.progress_bar.setVisible(False)
-        failures = getattr(self.pdf_worker, "failures", [])
+        pdf_worker = getattr(self, "pdf_worker", None)
+        failures = getattr(pdf_worker, "failures", []) if pdf_worker else []
         if failures:
             fail_msg = "\n".join([f"• Record ID {rid}: {err}" for rid, err in failures])
             QMessageBox.warning(

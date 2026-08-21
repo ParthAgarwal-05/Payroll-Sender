@@ -17,6 +17,9 @@ class UploadTab(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.preview_data = None
+        self.parse_worker = None
+        self.sync_worker = None
+        self.pdf_worker = None
         self.init_ui()
 
     def init_ui(self):
@@ -238,7 +241,8 @@ class UploadTab(QWidget):
 
     def on_pdf_generation_complete(self, count):
         """All synchronization and PDF generation completed."""
-        failures = getattr(self.pdf_worker, "failures", [])
+        pdf_worker = getattr(self, "pdf_worker", None)
+        failures = getattr(pdf_worker, "failures", []) if pdf_worker else []
         if failures:
             fail_msg = "\n".join([f"• Record ID {rid}: {err}" for rid, err in failures])
             QMessageBox.warning(
