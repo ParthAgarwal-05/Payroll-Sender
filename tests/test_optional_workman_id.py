@@ -345,7 +345,14 @@ class TestOptionalWorkmanId(unittest.TestCase):
         self.assertEqual(pr_dict["workman_id"], "EMP_OLD_1")
         
         conn.close()
-        os.remove(temp_db_path)
+        engine.dispose()
+        import gc
+        gc.collect()
+        if os.path.exists(temp_db_path):
+            try:
+                os.remove(temp_db_path)
+            except Exception:
+                pass
 
     def test_scenario_7_pdf_generation_stability(self):
         """Verify PDF slip generation works with NULL or blank workman_ids."""

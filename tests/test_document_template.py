@@ -297,7 +297,10 @@ class TestWhatsAppDocumentTemplate(unittest.TestCase):
 
         # Clean up temp file
         if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
+            try:
+                os.remove(temp_file_path)
+            except Exception:
+                pass
 
     @patch("services.whatsapp_service.WhatsAppService.fetch_template_definition")
     @patch("services.whatsapp_service.WhatsAppService.upload_pdf_media")
@@ -367,7 +370,10 @@ class TestWhatsAppDocumentTemplate(unittest.TestCase):
 
         # Clean up temp file
         if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
+            try:
+                os.remove(temp_file_path)
+            except Exception:
+                pass
 
     def test_variable_extraction_and_mixed_ordering(self):
         """Test extraction of mixed variables from BODY text and order preservation."""
