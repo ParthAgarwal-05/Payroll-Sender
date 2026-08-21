@@ -65,8 +65,12 @@ class TestPdfUuidStorage(unittest.TestCase):
     def tearDownClass(cls):
         import os
         import shutil
+        from database.db import dispose_engine
+        dispose_engine()
+        import gc
+        gc.collect()
         if os.path.exists(cls.temp_dir):
-            shutil.rmtree(cls.temp_dir)
+            shutil.rmtree(cls.temp_dir, ignore_errors=True)
         if "PAYROLL_DATA_DIR" in os.environ:
             del os.environ["PAYROLL_DATA_DIR"]
 

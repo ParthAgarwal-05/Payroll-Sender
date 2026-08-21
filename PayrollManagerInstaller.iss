@@ -26,7 +26,7 @@ PrivilegesRequired=admin
 
 DisableProgramGroupPage=yes
 
-SetupIconFile=
+; SetupIconFile=
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]

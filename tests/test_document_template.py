@@ -28,8 +28,12 @@ class TestWhatsAppDocumentTemplate(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        from database.db import dispose_engine
+        dispose_engine()
+        import gc
+        gc.collect()
         if os.path.exists(TEMP_DATA_DIR):
-            shutil.rmtree(TEMP_DATA_DIR)
+            shutil.rmtree(TEMP_DATA_DIR, ignore_errors=True)
         if "PAYROLL_DATA_DIR" in os.environ:
             del os.environ["PAYROLL_DATA_DIR"]
 

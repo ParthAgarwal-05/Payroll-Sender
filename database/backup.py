@@ -83,24 +83,44 @@ def restore_db(backup_path: Path, db_path: Path) -> None:
     # Dispose the active SQLAlchemy engine if it exists
     from database.db import dispose_engine
     dispose_engine()
+    import gc
+    gc.collect()
 
     # Clean up journal files to prevent corruption when starting with the new database
     wal_path = db_path.with_name(db_path.name + "-wal")
     shm_path = db_path.with_name(db_path.name + "-shm")
 
     if wal_path.exists():
-        wal_path.unlink()
+        try:
+            wal_path.unlink()
+        except Exception:
+            pass
     if shm_path.exists():
-        shm_path.unlink()
+        try:
+            shm_path.unlink()
+        except Exception:
+            pass
 
     # Perform atomic restore
     temp_target = db_path.with_name(f".{db_path.name}.restore_tmp")
     try:
         sqlite_backup(backup_path, temp_target)
-        temp_target.replace(db_path)
+        try:
+            temp_target.replace(db_path)
+        except PermissionError:
+            # Fallback for Windows file locks: copy directly via sqlite backup API
+            sqlite_backup(backup_path, db_path)
+            if temp_target.exists():
+                try:
+                    temp_target.unlink()
+                except Exception:
+                    pass
     except Exception as e:
         if temp_target.exists():
-            temp_target.unlink()
+            try:
+                temp_target.unlink()
+            except Exception:
+                pass
         raise e
 
     logger.info("Database restored successfully from: %s", backup_path)

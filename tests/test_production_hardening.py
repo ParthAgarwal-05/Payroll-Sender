@@ -231,7 +231,7 @@ class TestProductionHardening(unittest.TestCase):
         db_path = get_db_path()
         backup_dir = db_path.parent / "test_backups"
         if backup_dir.exists():
-            shutil.rmtree(backup_dir)
+            shutil.rmtree(backup_dir, ignore_errors=True)
         backup_dir.mkdir(parents=True, exist_ok=True)
 
         try:
@@ -245,7 +245,7 @@ class TestProductionHardening(unittest.TestCase):
             self.assertTrue(verify_integrity(db_path))
         finally:
             if backup_dir.exists():
-                shutil.rmtree(backup_dir)
+                shutil.rmtree(backup_dir, ignore_errors=True)
 
     def test_database_integrity_verification_positive(self):
         """9. Verify positive integrity check on a valid database."""
